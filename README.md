@@ -101,5 +101,5 @@ and run the application with the following command (example serial port and firs
 #### Tested hardware
 Works with the following hardware:
 - Elite USB ANT+ Key
-- [DIY cable](https://bikeboard.at/Board/showthread.php?2050-Schnittstellenkabel-RS-232-an-PC)
+- [DIY RS232 cable](https://bikeboard.at/Board/showthread.php?2050-Schnittstellenkabel-RS-232-an-PC)
 - Goobay USB serial RS232 converter
