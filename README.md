@@ -7,6 +7,8 @@ the data to any other ANT+ device. Currently supports the following Daum ergo bi
 
 ## Building DaumErgoAnt
 ### Prerequisites
+Currently, the application is only supported on MacOS. 
+
 To build and run the application the following tools are needed:
 
 - [C++14](https://isocpp.org)
