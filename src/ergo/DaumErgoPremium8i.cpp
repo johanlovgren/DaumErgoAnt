@@ -5,7 +5,7 @@
 #include <thread>
 #include <cstring>
 #include <iostream>
-#include <fcntl.h>
+#include <cmath>
 
 // Port according to Daum interface documentation
 #define PORT 51955
@@ -162,10 +162,10 @@ void DaumErgoPremium8i::UpdateTrainingDataComplete() {
     dataMutex.lock();
     time = std::stoi(strtok((char*) receiveBuffer+FIRST_DATA_INDEX, (const char*) "\x1d"));
     heartRate = std::stoi(strtok(nullptr, (const char*) "\x1d"));
-    usSpeed = lround(std::stoi(strtok(nullptr, (const char*) "\x1d")) * TO_KMH);
+    usSpeed = round(std::stoi(strtok(nullptr, (const char*) "\x1d")) * TO_KMH);
     inclination = std::stof(strtok(nullptr, (const char*) "\x1d"));
     distance = std::stoi(strtok(nullptr, (const char*) "\x1d"));
-    usCadence = lround(std::stof(strtok(nullptr, (const char*) "\x1d")));
+    usCadence = round(std::stof(strtok(nullptr, (const char*) "\x1d")));
     usPower = std::stoi(strtok(nullptr, (const char*) "\x1d"));
     physicalEnergy = std::stof(strtok(nullptr, (const char*) "\x1d"));
     realisticEnergy = std::stof(strtok(nullptr, (const char*) "\x1d"));
