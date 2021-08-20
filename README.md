@@ -31,12 +31,14 @@ cp `find ./ANT-SDK_Mac.3-2.5/ANT_LIB/ -name '*.h*'` ./DaumErgoAnt/src/libs/inclu
 cp ANT-SDK_Mac.3-2.5/Bin/libantbase.a ./DaumErgoAnt/src/libs/
 ```
 
-To build the application the ANT+ network key need to be added to DaumErgoAnt/src/ant/AntService.cpp line 14, inside
+To build the application the ANT+ network key need to be added to DaumErgoAnt/network_key.cfg inside
 the curly brackets.
 ```
-// ********************************* ENTER NETWORK KEY HERE ********************************
-#define USER_NETWORK_KEY      { /* REPLACE THIS COMMENT WITH NETWORK KEY */ } 
-// ********************************* ENTER NETWORK KEY HERE ********************************
+/***************** ANT+ Network key *****************/
+#define NETWORK_KEY { /* ENTER NETWORK KEY HERE */  };
+// Example
+// #define NETWORK_KEY { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08  };
+/***************** ANT+ Network key *****************/
 ```
 
 The network key can be found [here](https://www.thisisant.com/developer/ant-plus/ant-plus-basics/network-keys) and is a
