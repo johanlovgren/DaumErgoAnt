@@ -10,9 +10,8 @@
 #include <iostream>
 #include <cmath>
 
-// ********************************* ENTER NETWORK KEY HERE ********************************
-#define USER_NETWORK_KEY      { /* REPLACE THIS COMMENT WITH NETWORK KEY */ }
-// ********************************* ENTER NETWORK KEY HERE ********************************
+// Includes network_key as a config
+#include "../../../network_key.cfg"
 
 
 
@@ -234,7 +233,7 @@ BOOL AntService::InitANT()
 
     if (bVerbose)
         std::cout << "Setting network key.. " << std::endl;
-    UCHAR ucNetKey[8] = USER_NETWORK_KEY;
+    UCHAR ucNetKey[] = NETWORK_KEY;
 
     bStatus = pclMessageObject->SetNetworkKey(USER_NETWORK_NUM, ucNetKey, MESSAGE_TIMEOUT);
     if (!bStatus) {
