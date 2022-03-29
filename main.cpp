@@ -1,58 +1,85 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
-#include <thread>
+#include <fstream>
+
 #include "DaumErgoPremium8i.h"
 #include "DaumErgo8008TRS.h"
 #include "AntService.h"
 
-
+using namespace std;
 #define USAGE_COL_WIDTH 25
 
 // command line arguments
 #define PROG_NAME "daum-ergoant"
 #define VERBOSE "-v"
 #define HELP "-h"
+#define WORKOUT "-w"
+
+bool verbose = false;
+DaumErgo *ergo = nullptr;
+string param;
+int antDeviceNr;
+vector<tuple<int, int>> workout;
 
 
 static void showUsage() {
-    std::cout << "Usage: " << std::endl;
-    std::cout << "\t" PROG_NAME " <option(s)> BIKETYPE [PARAMETERS] <ANT device number>" << std::endl;
-    std::cout << "Options:" << std::endl;
-    std::cout <<  "\t" << std::left << std::setw(USAGE_COL_WIDTH) << HELP;
-    std::cout << "Show this help message" << std::endl;
-    std::cout << "\t" << std::left << std::setw(USAGE_COL_WIDTH) << VERBOSE;
-    std::cout << "Verbose output" << std::endl;
-    std::cout << "Biketypes:" << std::endl;
-    std::cout << "\t" << std::left << std::setw(USAGE_COL_WIDTH) << ARG_P8I " [IP ADDRESS]";
-    std::cout << "Premium 8i" << std::endl;
-    std::cout << "\t" << std::left << std::setw(USAGE_COL_WIDTH) << ARG_8K8TRS " [SERIAL_PORT]";
-    std::cout <<  "8008trs:" << std::endl;
-    std::cout << std::left << std::setw(USAGE_COL_WIDTH) << "ANT device number:" << std::endl;
-    std::cout << "\t0 for first USB stick plugged etc." << std::endl;
+    cout << "Usage: " << endl;
+    cout << "\t" PROG_NAME " <option(s)> BIKETYPE [PARAMETERS] [ANT device number]" << endl;
+    cout << "Options:" << endl;
+    cout <<  "\t" << left << setw(USAGE_COL_WIDTH) << HELP;
+    cout << "Show this help message" << endl;
+    cout << "\t" << left << setw(USAGE_COL_WIDTH) << VERBOSE;
+    cout << "Verbose output" << endl;
+    cout << "\t" << left << setw(USAGE_COL_WIDTH) << WORKOUT " [filename]";
+    cout << "Workout to run. File with two numbers per line: TIME WATT" << endl;
+    cout << "Biketypes:" << endl;
+    cout << "\t" << left << setw(USAGE_COL_WIDTH) << ARG_P8I " [IP ADDRESS]";
+    cout << "Premium 8i" << endl;
+    cout << "\t" << left << setw(USAGE_COL_WIDTH) << ARG_8K8TRS " [SERIAL_PORT]";
+    cout <<  "8008trs:" << endl;
+    cout << left << setw(USAGE_COL_WIDTH) << "ANT device number:" << endl;
+    cout << "\t0 for first USB stick plugged etc." << endl;
 
 }
 
-bool parseArguments(bool *verbose, int *antDeviceNr, DaumErgo **ergo, std::string *param, int argc, char**argv) {
+bool parseWorkout(char *filename) {
+    ifstream infile(filename);
+    if (infile.fail()) {
+        cerr << "Workout file does not exist" << endl;
+        return false;
+    }
+    int time, watt;
+    while (infile >> time >> watt) {
+        workout.emplace_back(time, watt);
+    }
+    return true;
+}
+
+
+bool parseArguments(int argc, char**argv) {
     for (int i = 0; i < argc; ++i) {
-        std::string arg = argv[i];
+        string arg = argv[i];
         if (arg == HELP) {
             showUsage();
             return false;
         } else if (arg == VERBOSE) {
-            *verbose = true;
+            verbose = true;
+        } else if (arg == WORKOUT) {
+            if (!parseWorkout(argv[i+1]))
+                return false;
         } else if (arg == ARG_P8I) {
-            *param = argv[i+1];
-            *antDeviceNr = std::stoi(argv[i+2], nullptr, 10);
-            *ergo = new DaumErgoPremium8i(*verbose);
+            param = argv[i+1];
+            antDeviceNr = stoi(argv[i+2], nullptr, 10);
+            ergo = new DaumErgoPremium8i(verbose);
             return true;
         } else if (arg == ARG_8K8TRS) {
-            *param = argv[i+1];
-            *antDeviceNr = std::stoi(argv[i + 2], nullptr, 10);
-            *ergo = new DaumErgo8008TRS(*verbose);
+            param = argv[i+1];
+            antDeviceNr = stoi(argv[i + 2], nullptr, 10);
+            ergo = new DaumErgo8008TRS(verbose);
             return true;
         } else if (i == argc - 1) {
-            std::cerr << "Not valid arguments" << std::endl;
+            cerr << "Not valid arguments" << endl;
             showUsage();
             return false;
         }
@@ -60,7 +87,7 @@ bool parseArguments(bool *verbose, int *antDeviceNr, DaumErgo **ergo, std::strin
     return false;
 }
 
-int run(DaumErgo *ergo, const std::string& param, char antDeviceNr, bool verbose) {
+int run() {
     if (!ergo->Init(param.c_str()))
         return 1;
     if (!ergo->RunDataUpdater())
@@ -72,11 +99,18 @@ int run(DaumErgo *ergo, const std::string& param, char antDeviceNr, bool verbose
         return 1;
     }
 
-    std::cout << "Started to transmit data" << std::endl;
-    std::string input;
+    if (!workout.empty()) {
+        if (ergo->RunWorkout(workout))
+            cout << "Starting workout in 10s..." << endl;
+        else
+            return 1;
+    }
+
+    cout << "Started to transmit data" << endl;
+    string input;
     while (input != "q") {
-        std::cout << "Enter q to quit: ";
-        std::cin >> input;
+        cout << "Enter q to quit: ";
+        cin >> input;
     }
 
     antService->Close();
@@ -91,15 +125,10 @@ int main(int argc, char**argv) {
         return 1;
     }
 
-    bool verbose;
-    DaumErgo *ergo = nullptr;
-    std::string param;
-    int antDeviceNr;
-
-    if (!parseArguments(&verbose, &antDeviceNr, &ergo, &param, argc, argv))
+    if (!parseArguments(argc, argv))
         return 1;
 
-    return run(ergo, param, (char)antDeviceNr, verbose);
+    return run();
 }
 
 

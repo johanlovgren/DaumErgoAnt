@@ -6,6 +6,8 @@
 #include <cstring>
 #include <iostream>
 #include <fcntl.h>
+#include <cmath>
+#include <vector>
 
 // Port according to Daum interface documentation
 #define PORT 51955
@@ -49,17 +51,10 @@ DaumErgoPremium8i::DaumErgoPremium8i(bool verbose) {
     sock = 0;
     valRead = 0;
 
-    time = 0;
-    heartRate = 0;
-    distance = 0;
-    usSpeed = 0;
-    inclination = 0;
-    physicalEnergy = 0;
-    realisticEnergy = 0;
-    torque = 0;
-    gear = 0;
-    onOff = 0;
-    rotationalSpeedStatus = 0;
+    time = 0; heartRate = 0; distance = 0;
+    usSpeed = 0; inclination = 0; physicalEnergy = 0;
+    realisticEnergy = 0; torque = 0; gear = 0;
+    onOff = 0; rotationalSpeedStatus = 0;
 
     memset(sendBuffer, 0, ERGOP8I_MAX_BUFFER_SIZE);
     memset(receiveBuffer, 0, ERGOP8I_MAX_BUFFER_SIZE);
@@ -76,7 +71,6 @@ bool DaumErgoPremium8i::Init(const char *ip) {
 
     if ((inet_pton(AF_INET, ip, &serverAddress.sin_addr)) <= 0) {
         std::cerr << "Could not convert IP address" << std::endl;
-
         return false;
     }
 
@@ -107,6 +101,11 @@ bool DaumErgoPremium8i::RunDataUpdater() {
     bDone = false;
     std::thread (&DaumErgoPremium8i::DataUpdater, this).detach();
     return true;
+}
+
+bool DaumErgoPremium8i::RunWorkout(std::vector<std::tuple<int, int>>) {
+    std::cerr << "Not implemented" << std::endl;
+    return false;
 }
 
 void DaumErgoPremium8i::Close() {
@@ -162,10 +161,10 @@ void DaumErgoPremium8i::UpdateTrainingDataComplete() {
     dataMutex.lock();
     time = std::stoi(strtok((char*) receiveBuffer+FIRST_DATA_INDEX, (const char*) "\x1d"));
     heartRate = std::stoi(strtok(nullptr, (const char*) "\x1d"));
-    usSpeed = lround(std::stoi(strtok(nullptr, (const char*) "\x1d")) * TO_KMH);
+    usSpeed = round(std::stoi(strtok(nullptr, (const char*) "\x1d")) * TO_KMH);
     inclination = std::stof(strtok(nullptr, (const char*) "\x1d"));
     distance = std::stoi(strtok(nullptr, (const char*) "\x1d"));
-    usCadence = lround(std::stof(strtok(nullptr, (const char*) "\x1d")));
+    usCadence = round(std::stof(strtok(nullptr, (const char*) "\x1d")));
     usPower = std::stoi(strtok(nullptr, (const char*) "\x1d"));
     physicalEnergy = std::stof(strtok(nullptr, (const char*) "\x1d"));
     realisticEnergy = std::stof(strtok(nullptr, (const char*) "\x1d"));
@@ -218,3 +217,5 @@ bool DaumErgoPremium8i::SendReceiveMessage() {
     send(sock, sendBuffer, ONE_BYTE, 0);
     return true;
 }
+
+

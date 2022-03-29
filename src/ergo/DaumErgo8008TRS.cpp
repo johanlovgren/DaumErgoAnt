@@ -2,6 +2,8 @@
 // Created by Johan Lövgren on 2021-08-15.
 //
 #include <iostream>
+#include <utility>
+#include <vector>
 #include "DaumErgo8008TRS.h"
 
 
@@ -10,6 +12,7 @@
 
 #define GET_TRAINING_DATA 0x40
 #define GET_ADDRESS 0x11
+#define SET_WATT 0x51
 
 // Training data offsets according to Daum documentation
 #define PROGRAMME_OFFSET 2
@@ -25,6 +28,9 @@
 #define PULSE_STATUS_OFFSET 15
 #define GEAR_OFFSET 16
 #define REAL_JOULE_OFFSET 17
+
+#define TIME 0
+#define WATT 1
 
 // ----------------------- Public -------------------------------
 
@@ -84,12 +90,45 @@ bool DaumErgo8008TRS::RunDataUpdater() {
     return true;
 }
 
+bool DaumErgo8008TRS::RunWorkout(std::vector<std::tuple<int, int>> time_watt) {
+    if (!serial->IsOpen()) {
+        std::cerr << "Serial port " << serial->GetPortName() << " is not open" << std::endl;
+        std::cerr << "Failed to start workout" << std::endl;
+        return false;
+    }
+    std::thread(&DaumErgo8008TRS::SimpleController, this, time_watt).detach();
+    return true;
+}
+
 // ----------------------- Private  -------------------------------
+
+void DaumErgo8008TRS::SetWatt(int watt) {
+    serialMutex.lock();
+    memset(txBuffer, 0, ERGO_8K8TRS_MAX_BUFFER_SIZE);
+    // Three bytes to write, query, address and new Watt (divided by 5)
+    txBuffer[0] = SET_WATT;
+    txBuffer[1] = ergoAddress;
+    txBuffer[2] = watt / 5;
+    serial->Write(txBuffer, 3);
+    // Read to clear
+    serial->Read(rxBuffer, 3);
+    serialMutex.unlock();
+}
+
+void DaumErgo8008TRS::SimpleController(std::vector<std::tuple<int, int>> time_watt) {
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+    for (int i = 0; i < time_watt.size() && !bDone; ++i) {
+        SetWatt(std::get<WATT>(time_watt[i]));
+        std::this_thread::sleep_for(std::chrono::seconds(std::get<TIME>(time_watt[i])));
+    }
+}
+
 
 /**
  * Fetches the current training data from the ergo and updates the object
  */
 void DaumErgo8008TRS::UpdateTrainingData() {
+    serialMutex.lock();
     memset(txBuffer, 0, ERGO_8K8TRS_MAX_BUFFER_SIZE);
     txBuffer[0] = GET_TRAINING_DATA;
     txBuffer[1] = ergoAddress;
@@ -109,6 +148,7 @@ void DaumErgo8008TRS::UpdateTrainingData() {
     time = rxBuffer[PULSE_OFFSET];
     pedalOnOff = rxBuffer[PULSE_OFFSET];
     dataMutex.unlock();
+    serialMutex.unlock();
 }
 
 /**

@@ -18,7 +18,10 @@ if (NOT IOKIT)
 endif()
 
 
-add_executable(daum-ergoant main.cpp src/ergo/DaumErgoPremium8i.cpp src/ergo/DaumErgoPremium8i.h src/ergo/DaumErgo.cpp src/ergo/DaumErgo.h src/ant/AntService.cpp src/ant/AntService.h src/libs/includes/types.h src/ergo/DaumErgo8008TRS.cpp src/ergo/DaumErgo8008TRS.h src/utils/Serial.cpp src/utils/Serial.h)
+add_executable(daum-ergoant main.cpp src/ergo/DaumErgoPremium8i.cpp src/ergo/DaumErgoPremium8i.h src/ergo/DaumErgo.cpp
+        src/ergo/DaumErgo.h src/ant/AntService.cpp src/ant/AntService.h src/libs/includes/types.h
+        src/ergo/DaumErgo8008TRS.cpp src/ergo/DaumErgo8008TRS.h src/utils/Serial.cpp src/utils/Serial.h
+        src/ant/AntBicyclePower.cpp src/ant/AntBicyclePower.h)
 target_link_libraries(daum-ergoant ${CMAKE_SOURCE_DIR}/src/libs/libantbase.a ${CORE_FOUNDATION} ${IOKIT})
 
 

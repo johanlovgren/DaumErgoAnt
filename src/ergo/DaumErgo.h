@@ -27,6 +27,13 @@ public:
      */
     virtual bool RunDataUpdater() = 0;
     /**
+     * Runs a workout on the ergo.
+     * @param workout Workout to run, where each element in the vector is a tuple defining how long time a certaing
+     * wattage should hold
+     * @return
+     */
+    virtual bool RunWorkout(std::vector<std::tuple<int, int>> workout) = 0;
+    /**
      * Closes the ergo, closing the connection and stops the data updater.
      */
     virtual void Close() = 0;

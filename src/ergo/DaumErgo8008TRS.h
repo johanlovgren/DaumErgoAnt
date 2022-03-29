@@ -20,7 +20,7 @@ public:
      * Default constructor
      * @param verbose output enabled if true
      */
-    explicit  DaumErgo8008TRS(bool verbose);
+    explicit DaumErgo8008TRS(bool verbose);
     ~DaumErgo8008TRS();
     /**
      * Initializes the DaumErgo8008TRS, setting up the serial connection
@@ -39,12 +39,22 @@ public:
      * @return true if started successfully, otherwise false
      */
     bool RunDataUpdater() override;
+    /**
+     * Runs a workout on the ergo.
+     * @param workout Workout to run, where each element in the vector is a tuple defining how long time a certain
+     * wattage should hold
+     * @return
+     */
+    bool RunWorkout(std::vector<std::tuple<int, int>> workout) override;
 
 private:
     Serial* serial;
+    std::mutex serialMutex;
     unsigned char GetErgoAddress();
     void DataUpdater();
     void UpdateTrainingData();
+    void SimpleController(std::vector<std::tuple<int, int>>);
+    void SetWatt(int watt);
 
 
     unsigned char ergoAddress;

@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+
 #define ARG_P8I "p8i"
 #define ERGOP8I_MAX_BUFFER_SIZE 1024
 /**
@@ -39,6 +40,12 @@ public:
      */
     bool RunDataUpdater() override;
 
+    /**
+     * Starts a workout on the bike.
+     * @param workout The workout to run, where each tuple in the vector defines how long a certain wattage should hold
+     * @return True if workout started, otherwise false
+     */
+    bool RunWorkout(std::vector<std::tuple<int, int>> workout) override;
 
 private:
     void UpdateTrainingDataComplete();

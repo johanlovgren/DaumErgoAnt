@@ -291,7 +291,6 @@ void AntService::MessageThread()
     UCHAR ucCondResult = DSIThread_CondSignal(&condTestDone);
     assert(ucCondResult == DSI_THREAD_ENONE);
     DSIThread_MutexUnlock(&mutexTestDone);
-
 }
 
 

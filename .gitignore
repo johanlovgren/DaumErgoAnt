@@ -83,3 +83,4 @@ fabric.properties
 src/libs/includes/*
 !libs/includes/.gitkeep
 !libs/.gitkeep
+network_key.cfg
