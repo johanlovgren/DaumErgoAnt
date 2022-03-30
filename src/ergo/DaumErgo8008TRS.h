@@ -50,11 +50,12 @@ public:
 private:
     Serial* serial;
     std::mutex serialMutex;
-    unsigned char GetErgoAddress();
+    bool GetErgoAddress();
     void DataUpdater();
     void UpdateTrainingData();
     void SimpleController(std::vector<std::tuple<int, int>>);
     void SetWatt(int watt);
+    void SetTime(uint8_t seconds, uint8_t minutes, uint8_t hours);
 
 
     unsigned char ergoAddress;

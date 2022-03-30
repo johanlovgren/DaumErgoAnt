@@ -13,6 +13,10 @@
 #define GET_TRAINING_DATA 0x40
 #define GET_ADDRESS 0x11
 #define SET_WATT 0x51
+#define SET_TIME 0x62
+
+#define SET_WATT_BYTES 3
+#define SET_TIME_BYTES 5
 
 // Training data offsets according to Daum documentation
 #define PROGRAMME_OFFSET 2
@@ -31,6 +35,7 @@
 
 #define TIME 0
 #define WATT 1
+#define WORKOUT_START_SLEEP 10
 
 // ----------------------- Public -------------------------------
 
@@ -50,12 +55,13 @@ bool DaumErgo8008TRS::Init(const char *serialPort) {
     serial = new Serial(serialPort, BAUD_RATE);
     if (!serial->Open()) {
         std::cerr << "Failed to open port at: " << serialPort << " Error: " << strerror(errno) << std::endl;
+        return false;
     }
-    ergoAddress = GetErgoAddress();
-    if (ergoAddress < 0) {
+    if (!GetErgoAddress()) {
         std::cerr << "Failed to fetch Ergo address at port: " << serialPort << std::endl;
         return false;
-    } else if (bVerbose) {
+    }
+    if (bVerbose) {
         std::cout << "Ergo address fetched: 0x" << std::hex << +ergoAddress << std::endl;
     }
 
@@ -102,21 +108,40 @@ bool DaumErgo8008TRS::RunWorkout(std::vector<std::tuple<int, int>> time_watt) {
 
 // ----------------------- Private  -------------------------------
 
+void DaumErgo8008TRS::SetTime(uint8_t seconds, uint8_t minutes, uint8_t hours) {
+    serialMutex.lock();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    memset(txBuffer, 0, ERGO_8K8TRS_MAX_BUFFER_SIZE);
+    memset(rxBuffer, 0, ERGO_8K8TRS_MAX_BUFFER_SIZE);
+    // Three bytes to write: query, address and new Watt (divided by 5)
+    txBuffer[0] = SET_TIME;
+    txBuffer[1] = ergoAddress;
+    txBuffer[2] = seconds;
+    txBuffer[3] = minutes;
+    txBuffer[4] = hours;
+    serial->Write(txBuffer, SET_TIME_BYTES);
+    // Read to clear
+    serial->Read(rxBuffer, 2);
+    serialMutex.unlock();
+}
+
 void DaumErgo8008TRS::SetWatt(int watt) {
     serialMutex.lock();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
     memset(txBuffer, 0, ERGO_8K8TRS_MAX_BUFFER_SIZE);
-    // Three bytes to write, query, address and new Watt (divided by 5)
+    memset(rxBuffer, 0, ERGO_8K8TRS_MAX_BUFFER_SIZE);
+    // Three bytes to write: query, address and new Watt (divided by 5)
     txBuffer[0] = SET_WATT;
     txBuffer[1] = ergoAddress;
-    txBuffer[2] = watt / 5;
-    serial->Write(txBuffer, 3);
+    txBuffer[2] = (uint8_t) (watt / 5);
+    serial->Write(txBuffer, SET_WATT_BYTES);
     // Read to clear
     serial->Read(rxBuffer, 3);
     serialMutex.unlock();
 }
 
 void DaumErgo8008TRS::SimpleController(std::vector<std::tuple<int, int>> time_watt) {
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    std::this_thread::sleep_for(std::chrono::seconds(WORKOUT_START_SLEEP));
     for (int i = 0; i < time_watt.size() && !bDone; ++i) {
         SetWatt(std::get<WATT>(time_watt[i]));
         std::this_thread::sleep_for(std::chrono::seconds(std::get<TIME>(time_watt[i])));
@@ -129,14 +154,20 @@ void DaumErgo8008TRS::SimpleController(std::vector<std::tuple<int, int>> time_wa
  */
 void DaumErgo8008TRS::UpdateTrainingData() {
     serialMutex.lock();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
     memset(txBuffer, 0, ERGO_8K8TRS_MAX_BUFFER_SIZE);
+    memset(rxBuffer, 0, ERGO_8K8TRS_MAX_BUFFER_SIZE);
     txBuffer[0] = GET_TRAINING_DATA;
     txBuffer[1] = ergoAddress;
     // Two bytes to write, query and address
     serial->Write(txBuffer, 2);
     // Ergo returns 19 bytes of data
     serial->Read(rxBuffer, 19);
-
+    // If data received is not correct, don't update stored data
+    if (rxBuffer[0] != GET_TRAINING_DATA) {
+        serialMutex.unlock();
+        return;
+    }
     dataMutex.lock();
     currentProgramme = rxBuffer[PROGRAMME_OFFSET];
     currentUser = rxBuffer[USER_OFFSET];
@@ -155,12 +186,15 @@ void DaumErgo8008TRS::UpdateTrainingData() {
  * Fetches the bike address which is needed for all other queries
  * @return If successful, the bike address. On failure -1 is returned
  */
-unsigned char DaumErgo8008TRS::GetErgoAddress() {
+bool DaumErgo8008TRS::GetErgoAddress() {
+    serialMutex.lock();
     memset(txBuffer, 0, ERGO_8K8TRS_MAX_BUFFER_SIZE);
     txBuffer[0] = GET_ADDRESS;
     if (serial->Write(txBuffer, 1) < 0)
-        return -1;
+        return false;
     if (serial->Read(rxBuffer, 2) < 0)
-        return -1;
-    return rxBuffer[1];
+        return false;
+    ergoAddress = rxBuffer[1];
+    serialMutex.unlock();
+    return true;
 }
