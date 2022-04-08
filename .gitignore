@@ -80,7 +80,7 @@ crashlytics-build.properties
 fabric.properties
 
 ### Ergo ant specifics
-src/libs/includes/*
+include/*
 !libs/includes/.gitkeep
 !libs/.gitkeep
 network_key.cfg
