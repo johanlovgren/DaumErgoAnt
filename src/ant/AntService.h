@@ -6,11 +6,11 @@
 #define DAUMERGOANT_ANTSERVICE_H
 
 
-#include "types.h"
-#include "dsi_framer_ant.hpp"
-#include "dsi_thread.h"
-#include "dsi_serial_generic.hpp"
-#include "dsi_debug.hpp"
+#include "../../include/types.h"
+#include "../../include/dsi_framer_ant.hpp"
+#include "../../include/dsi_thread.h"
+#include "../../include/dsi_serial_generic.hpp"
+#include "../../include/dsi_debug.hpp"
 #include "DaumErgoPremium8i.h"
 
 #define CHANNEL_TYPE_MASTER   (0)

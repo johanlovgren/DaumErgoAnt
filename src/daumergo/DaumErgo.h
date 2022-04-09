@@ -53,13 +53,28 @@ public:
      */
     unsigned short GetSpeed();
 
+    // TODO Continue here!
+    virtual uint8_t GetEquipmentType() = 0;
+    virtual uint16_t GetElapsedTime() = 0;
+    virtual uint16_t GetDistanceTraveled() = 0;
+    virtual uint8_t GetHeartRate() = 0;
+    virtual uint8_t GetCapabilitiesState() = 0;
+    virtual uint8_t GetCycleLength() = 0;
+    virtual uint8_t GetResistanceLevel() = 0;
+    virtual uint16_t GetIncline() = 0;
+    virtual uint8_t GetFEStateBits() = 0;
+    virtual uint8_t GetTargetPowerFlag() = 0;
+    virtual uint8_t GetTrainerStatusBitField() = 0; // Table 8-27
+
 protected:
-    unsigned short usPower;
-    unsigned short usCadence;
-    unsigned short usSpeed;
-    bool bVerbose; // Used for verbose output
-    bool bDone;
-    bool bInitialized;
+    unsigned short currentPower;
+    unsigned short currentCadence;
+    unsigned short currentSpeed;
+    unsigned short distanceTraveled;
+    unsigned short elapsedTime;
+    bool verbose; // Used for verbose output
+    bool done;
+    bool initialized;
     std::mutex dataMutex;
 };
 

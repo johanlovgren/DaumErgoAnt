@@ -47,12 +47,12 @@
 
 
 DaumErgoPremium8i::DaumErgoPremium8i(bool verbose) {
-    bVerbose = verbose;
+    verbose = verbose;
     sock = 0;
     valRead = 0;
 
     time = 0; heartRate = 0; distance = 0;
-    usSpeed = 0; inclination = 0; physicalEnergy = 0;
+    currentSpeed = 0; inclination = 0; physicalEnergy = 0;
     realisticEnergy = 0; torque = 0; gear = 0;
     onOff = 0; rotationalSpeedStatus = 0;
 
@@ -79,26 +79,26 @@ bool DaumErgoPremium8i::Init(const char *ip) {
         std::cerr << "Could not connect IP address: " << connection << "\nErrno: " << errno << std::endl;
         return false;
     }
-    if (bVerbose)
+    if (verbose)
         std::cout << "Daum Ergo Premium 8i connection initialized" << std::endl;
 
-    bInitialized = true;
+    initialized = true;
     return true;
 }
 
 void DaumErgoPremium8i::DataUpdater() {
-    while (!bDone) {
+    while (!done) {
         UpdateTrainingDataComplete();
         std::this_thread::sleep_for(std::chrono::milliseconds (500));
     }
 }
 
 bool DaumErgoPremium8i::RunDataUpdater() {
-    if (!bInitialized) {
+    if (!initialized) {
         std::cerr << "Not initialized" << std::endl;
         return false;
     }
-    bDone = false;
+    done = false;
     std::thread (&DaumErgoPremium8i::DataUpdater, this).detach();
     return true;
 }
@@ -110,9 +110,54 @@ bool DaumErgoPremium8i::RunWorkout(std::vector<std::tuple<int, int>>) {
 
 void DaumErgoPremium8i::Close() {
     dataMutex.lock();
-    bDone = true;
+    done = true;
     close(sock);
     dataMutex.unlock();
+}
+
+// TODO Implement the following methods
+uint8_t DaumErgoPremium8i::GetEquipmentType() {
+    return 0;
+}
+
+uint16_t DaumErgoPremium8i::GetElapsedTime() {
+    return 0;
+}
+
+uint16_t DaumErgoPremium8i::GetDistanceTraveled() {
+    return 0;
+}
+
+uint8_t DaumErgoPremium8i::GetHeartRate() {
+    return 0;
+}
+
+uint8_t DaumErgoPremium8i::GetCapabilitiesState() {
+    return 0;
+}
+
+uint8_t DaumErgoPremium8i::GetCycleLength() {
+    return 0;
+}
+
+uint8_t DaumErgoPremium8i::GetResistanceLevel() {
+    return 0;
+}
+
+uint16_t DaumErgoPremium8i::GetIncline() {
+    return 0;
+}
+
+uint8_t DaumErgoPremium8i::GetFEStateBits() {
+    return 0;
+}
+
+uint8_t DaumErgoPremium8i::GetTargetPowerFlag() {
+    return 0;
+}
+
+uint8_t DaumErgoPremium8i::GetTrainerStatusBitField() {
+    return 0;
 }
 
 // ----------------------- Private -------------------------------
@@ -161,11 +206,11 @@ void DaumErgoPremium8i::UpdateTrainingDataComplete() {
     dataMutex.lock();
     time = std::stoi(strtok((char*) receiveBuffer+FIRST_DATA_INDEX, (const char*) "\x1d"));
     heartRate = std::stoi(strtok(nullptr, (const char*) "\x1d"));
-    usSpeed = round(std::stoi(strtok(nullptr, (const char*) "\x1d")) * TO_KMH);
+    currentSpeed = round(std::stoi(strtok(nullptr, (const char*) "\x1d")) * TO_KMH);
     inclination = std::stof(strtok(nullptr, (const char*) "\x1d"));
     distance = std::stoi(strtok(nullptr, (const char*) "\x1d"));
-    usCadence = round(std::stof(strtok(nullptr, (const char*) "\x1d")));
-    usPower = std::stoi(strtok(nullptr, (const char*) "\x1d"));
+    currentCadence = round(std::stof(strtok(nullptr, (const char*) "\x1d")));
+    currentPower = std::stoi(strtok(nullptr, (const char*) "\x1d"));
     physicalEnergy = std::stof(strtok(nullptr, (const char*) "\x1d"));
     realisticEnergy = std::stof(strtok(nullptr, (const char*) "\x1d"));
     torque = std::stof(strtok(nullptr, (const char*) "\x1d"));

@@ -37,11 +37,18 @@
 #define WATT 1
 #define WORKOUT_START_SLEEP 10
 
+#define ANT_EQUIPMENT_TYPE 25
+#define ANT_CAPABILITIES_STATE 52 // May need to be changed
+#define ANT_FE_BIT_FIELD 3
+#define CYCLE_CIRCUMFERENCE 210 // The circumference of the wheel for speed calculation
+#define MAXIMUM_WATT 800
+#define MINIMUM_WATT 25
+
 // ----------------------- Public -------------------------------
 
 DaumErgo8008TRS::DaumErgo8008TRS(bool verbose) {
     serial = nullptr;
-    bVerbose = verbose;
+    verbose = verbose;
     ergoAddress = -1;
 }
 
@@ -50,7 +57,7 @@ DaumErgo8008TRS::~DaumErgo8008TRS() {
 }
 
 bool DaumErgo8008TRS::Init(const char *serialPort) {
-    if (bVerbose)
+    if (verbose)
         std::cout << "Trying to open port: " << serialPort << std::endl;
     serial = new Serial(serialPort, BAUD_RATE);
     if (!serial->Open()) {
@@ -61,10 +68,9 @@ bool DaumErgo8008TRS::Init(const char *serialPort) {
         std::cerr << "Failed to fetch Ergo address at port: " << serialPort << std::endl;
         return false;
     }
-    if (bVerbose) {
+    if (verbose) {
         std::cout << "Ergo address fetched: 0x" << std::hex << +ergoAddress << std::endl;
     }
-
     return true;
 }
 
@@ -73,14 +79,14 @@ void DaumErgo8008TRS::Close() {
         return;
     }
 
-    bDone = false;
-    if (bVerbose)
+    done = false;
+    if (verbose)
         std::cout << "Closing serial port" << std::endl;
     serial->Close();
 }
 
 void DaumErgo8008TRS::DataUpdater() {
-    while (!bDone) {
+    while (!done) {
         UpdateTrainingData();
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
@@ -91,7 +97,7 @@ bool DaumErgo8008TRS::RunDataUpdater() {
         std::cerr << "Serial port " << serial->GetPortName() << " is not open" << std::endl;
         return false;
     }
-    bDone = false;
+    done = false;
     std::thread(&DaumErgo8008TRS::DataUpdater, this).detach();
     return true;
 }
@@ -104,6 +110,70 @@ bool DaumErgo8008TRS::RunWorkout(std::vector<std::tuple<int, int>> time_watt) {
     }
     std::thread(&DaumErgo8008TRS::SimpleController, this, time_watt).detach();
     return true;
+}
+
+uint8_t DaumErgo8008TRS::GetEquipmentType() {
+    return ANT_EQUIPMENT_TYPE;
+}
+
+uint16_t DaumErgo8008TRS::GetElapsedTime() {
+    dataMutex.lock();
+    uint16_t seconds = elapsedTime;
+    dataMutex.unlock();
+    return seconds;
+}
+
+uint16_t DaumErgo8008TRS::GetDistanceTraveled() {
+    dataMutex.lock();
+    uint16_t distance = distanceTraveled;
+    dataMutex.unlock();
+    return distance;
+}
+
+/**
+ * Returns the heart rate
+ * @return 0xFF, set as Invalid
+ */
+uint8_t DaumErgo8008TRS::GetHeartRate() {
+    return 0xFF;
+}
+
+uint8_t DaumErgo8008TRS::GetCapabilitiesState() {
+    return ANT_CAPABILITIES_STATE;
+}
+
+uint8_t DaumErgo8008TRS::GetFEStateBits() {
+    return ANT_FE_BIT_FIELD;
+}
+/**
+ * Returns the cycle length, in this case, wheel circumference
+ * @return
+ */
+uint8_t DaumErgo8008TRS::GetCycleLength() {
+    return CYCLE_CIRCUMFERENCE;
+}
+
+uint8_t DaumErgo8008TRS::GetResistanceLevel() {
+    dataMutex.lock();
+    uint16_t currentWatt = currentPower;
+    dataMutex.unlock();
+    return ((currentWatt - MINIMUM_WATT) / (MAXIMUM_WATT - MINIMUM_WATT)) * 100;
+}
+
+/**
+ * Returns the current incline
+ * @return 0x7FFF for invalid
+ */
+uint16_t DaumErgo8008TRS::GetIncline() {
+    return 0x7FFF;
+}
+
+uint8_t DaumErgo8008TRS::GetTargetPowerFlag() {
+    return 0;
+}
+
+uint8_t DaumErgo8008TRS::GetTrainerStatusBitField() {
+    return 0;
 }
 
 // ----------------------- Private  -------------------------------
@@ -142,7 +212,7 @@ void DaumErgo8008TRS::SetWatt(int watt) {
 
 void DaumErgo8008TRS::SimpleController(std::vector<std::tuple<int, int>> time_watt) {
     std::this_thread::sleep_for(std::chrono::seconds(WORKOUT_START_SLEEP));
-    for (int i = 0; i < time_watt.size() && !bDone; ++i) {
+    for (int i = 0; i < time_watt.size() && !done; ++i) {
         SetWatt(std::get<WATT>(time_watt[i]));
         std::this_thread::sleep_for(std::chrono::seconds(std::get<TIME>(time_watt[i])));
     }
@@ -171,13 +241,15 @@ void DaumErgo8008TRS::UpdateTrainingData() {
     dataMutex.lock();
     currentProgramme = rxBuffer[PROGRAMME_OFFSET];
     currentUser = rxBuffer[USER_OFFSET];
-    usPower = rxBuffer[POWER_OFFSET] * 5;
-    usCadence = rxBuffer[CADENCE_OFFSET];
-    usSpeed = rxBuffer[SPEED_OFFSET];
+    currentPower = rxBuffer[POWER_OFFSET] * 5;
+    currentCadence = rxBuffer[CADENCE_OFFSET];
+    currentSpeed = rxBuffer[SPEED_OFFSET];
     pulse = rxBuffer[PULSE_OFFSET];
     gear = rxBuffer[PULSE_OFFSET];
     time = rxBuffer[PULSE_OFFSET];
     pedalOnOff = rxBuffer[PULSE_OFFSET];
+    distanceTraveled = rxBuffer[DISTANCE_OFFSET] + (rxBuffer[DISTANCE_OFFSET] << 8);
+    elapsedTime = rxBuffer[TIME_OFFSET] + (rxBuffer[TIME_OFFSET+1] << 8);
     dataMutex.unlock();
     serialMutex.unlock();
 }

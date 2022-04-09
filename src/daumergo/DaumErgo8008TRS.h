@@ -47,6 +47,28 @@ public:
      */
     bool RunWorkout(std::vector<std::tuple<int, int>> workout) override;
 
+    uint8_t GetEquipmentType() override;
+
+    uint16_t GetElapsedTime() override;
+
+    uint16_t GetDistanceTraveled() override;
+
+    uint8_t GetHeartRate() override;
+
+    uint8_t GetCapabilitiesState() override;
+
+    uint8_t GetCycleLength() override;
+
+    uint8_t GetResistanceLevel() override;
+
+    uint16_t GetIncline() override;
+
+    uint8_t GetFEStateBits() override;
+
+    uint8_t GetTargetPowerFlag() override;
+
+    uint8_t GetTrainerStatusBitField() override;
+
 private:
     Serial* serial;
     std::mutex serialMutex;
@@ -60,10 +82,10 @@ private:
 
     unsigned char ergoAddress;
     u_int8_t currentProgramme, currentUser, pulse, pulseStatus, gear, time;
-    float distance, joule, realJoule;
+    float joule, realJoule;
     bool pedalOnOff;
-    unsigned char txBuffer[ERGO_8K8TRS_MAX_BUFFER_SIZE];
-    unsigned char rxBuffer[ERGO_8K8TRS_MAX_BUFFER_SIZE];
+    uint8_t txBuffer[ERGO_8K8TRS_MAX_BUFFER_SIZE];
+    uint8_t rxBuffer[ERGO_8K8TRS_MAX_BUFFER_SIZE];
 };
 
 

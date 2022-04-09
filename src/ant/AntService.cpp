@@ -11,9 +11,7 @@
 #include <cmath>
 
 // Includes network_key as a config
-#include "../../../network_key.cfg"
-
-
+#include "../../network_key.cfg"
 
 
 #define ENABLE_EXTENDED_MESSAGES

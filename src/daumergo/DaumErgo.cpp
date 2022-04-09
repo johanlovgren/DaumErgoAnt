@@ -5,30 +5,30 @@
 #include "DaumErgo.h"
 
 DaumErgo::DaumErgo() {
-    usPower = 0;
-    usCadence = 0;
-    usSpeed = 0;
-    bDone = false;
+    currentPower = 0;
+    currentCadence = 0;
+    currentSpeed = 0;
+    done = false;
 }
 
 
 unsigned short DaumErgo::GetPower() {
     dataMutex.lock();
-    unsigned short power = usPower;
+    unsigned short power = currentPower;
     dataMutex.unlock();
     return power;
 }
 
 unsigned short DaumErgo::GetCadence() {
     dataMutex.lock();
-    unsigned short cadence = usCadence;
+    unsigned short cadence = currentCadence;
     dataMutex.unlock();
     return cadence;
 }
 
 unsigned short DaumErgo::GetSpeed() {
     dataMutex.lock();
-    unsigned short speed = usSpeed;
+    unsigned short speed = currentSpeed;
     dataMutex.unlock();
     return speed;
 }
