@@ -7,21 +7,21 @@
 
 #include <cstdint>
 #include <DaumErgo.h>
+#include "AntProfile.h"
 #include "../../include/antdefines.h"
 #include "../../include/dsi_framer_ant.hpp"
 
-class AntFECProfile {
+class AntFECProfile: public AntProfile {
 public:
     explicit AntFECProfile(DaumErgo *ergo, DSIFramerANT *antMessageObject, uint8_t channelNumber);
     ~AntFECProfile();
-    void HandleTXEvent();
+    void HandleTXEvent(uint8_t *txBuffer) override;
 
 private:
     int transmitPatternCounter;
     int transmitCommonPageCounter;
     uint8_t channelNumber, eventCounter;
     uint16_t accumulatedPower;
-    uint8_t txBuffer[ANT_STANDARD_DATA_PAYLOAD_SIZE]{};
     DaumErgo *ergo;
     DSIFramerANT* antMessageObject;
 

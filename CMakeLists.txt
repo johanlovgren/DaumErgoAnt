@@ -21,7 +21,7 @@ endif()
 add_executable(daum-ergoant src/main.cpp src/daumergo/DaumErgoPremium8i.cpp src/daumergo/DaumErgoPremium8i.h src/daumergo/DaumErgo.cpp
         src/daumergo/DaumErgo.h src/ant/AntService.cpp src/ant/AntService.h include/types.h
         src/daumergo/DaumErgo8008TRS.cpp src/daumergo/DaumErgo8008TRS.h src/utils/Serial.cpp src/utils/Serial.h
-        src/ant/AntBicyclePower.cpp src/ant/AntBicyclePower.h src/ant/AntFECProfile.cpp src/ant/AntFECProfile.h)
+        src/ant/AntBicyclePower.cpp src/ant/AntBicyclePower.h src/ant/AntFECProfile.cpp src/ant/AntFECProfile.h src/ant/AntProfile.h src/ant/AntProfile.cpp)
 target_link_libraries(daum-ergoant ${CMAKE_SOURCE_DIR}/lib/libantbase.a ${CORE_FOUNDATION} ${IOKIT})
 
 

@@ -146,7 +146,7 @@ AntFECProfile::~AntFECProfile() {
     this->antMessageObject = nullptr;
 }
 
-void AntFECProfile::HandleTXEvent() {
+void AntFECProfile::HandleTXEvent(uint8_t *txBuffer) {
     TransmitPatternA(txBuffer);
     antMessageObject->SendBroadcastData(channelNumber, txBuffer);
 }
@@ -231,5 +231,6 @@ void AntFECProfile::DataPage80(uint8_t *buf) {
 }
 void AntFECProfile::DataPage81(uint8_t *buf) {
 }
+
 
 
