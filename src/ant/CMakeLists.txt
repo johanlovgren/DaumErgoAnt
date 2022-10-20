@@ -1,5 +1,7 @@
 add_library(ant
-        AntBicyclePower.cpp
+        AntBikePower.cpp
         AntFECProfile.cpp
         AntProfile.cpp
-        AntService.cpp)
+        AntService.cpp
+        AntBikeSpeedCadence.cpp
+        AntBikeSpeedCadence.h)
