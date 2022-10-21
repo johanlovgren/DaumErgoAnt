@@ -7,10 +7,7 @@
 
 #include "AntProfile.h"
 
-#define CHANNEL_PERIOD ((unsigned char) 8182)
-#define TRANS_TYPE ((unsigned char) 1)
-#define DEVICE_NUM ((unsigned short) 49)
-#define DEVICE_TYPE ((unsigned short) 11)
+
 
 class AntBikePower: public AntProfile {
 public:

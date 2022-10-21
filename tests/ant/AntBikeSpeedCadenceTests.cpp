@@ -3,7 +3,7 @@
 //
 
 #include "gtest/gtest.h"
-#include "../../src/ant/AntBikeSpeedCadence.h"
+#include "../../src/ant/AntBikeSpeedCadence.cpp"
 #include "../../include/antdefines.h"
 
 TEST (ANTBikeSpeedCadence, Constants) {
