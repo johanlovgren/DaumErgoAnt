@@ -24,11 +24,10 @@
 
 // ----------------------- Public -------------------------------
 
-AntService::AntService(bool verbose)
-{
-    pclSerialObject = (DSISerialGeneric*)nullptr;
-    pclMessageObject = (DSIFramerANT*)nullptr;
-    uiDSIThread = (DSI_THREAD_ID)nullptr;
+AntService::AntService(bool verbose) {
+    pclSerialObject = (DSISerialGeneric *) nullptr;
+    pclMessageObject = (DSIFramerANT *) nullptr;
+    uiDSIThread = (DSI_THREAD_ID) nullptr;
     bDone = FALSE;
     initialised = FALSE;
 
@@ -36,11 +35,10 @@ AntService::AntService(bool verbose)
 
     nInitialisedProfiles = 0;
     currentlyInitialisingProfile = false;
-    memset(aucTransmitBuffer,0,ANT_STANDARD_DATA_PAYLOAD_SIZE);
+    memset(aucTransmitBuffer, 0, ANT_STANDARD_DATA_PAYLOAD_SIZE);
 }
 
-AntService::~AntService()
-{
+AntService::~AntService() {
     delete pclMessageObject;
     delete pclSerialObject;
 }
@@ -54,8 +52,7 @@ bool AntService::AddAntProfile(AntProfile *antProfile) {
     return true;
 }
 
-BOOL AntService::Init(UCHAR ucUSBDeviceNumber_)
-{
+BOOL AntService::Init(UCHAR ucUSBDeviceNumber_) {
 
     BOOL bStatus;
 
@@ -103,7 +100,7 @@ BOOL AntService::Init(UCHAR ucUSBDeviceNumber_)
     // If the Open function failed, most likely the device
     // we are trying to access does not exist, or it is connected
     // to another program
-    if(!bStatus) {
+    if (!bStatus) {
         std::cerr << "Failed to connect to ANT device at USB port " << ucUSBDeviceNumber_ << std::endl;
         return FALSE;
     }
@@ -124,8 +121,7 @@ BOOL AntService::Init(UCHAR ucUSBDeviceNumber_)
     return TRUE;
 }
 
-void AntService::Close()
-{
+void AntService::Close() {
     if (!initialised)
         return;
 
@@ -151,7 +147,7 @@ void AntService::Close()
     DSIThread_CondDestroy(&condTestDone);
 
     //Close all stuff
-    if(pclSerialObject)
+    if (pclSerialObject)
         pclSerialObject->Close();
 
 #if defined(DEBUG_FILE)
@@ -183,8 +179,7 @@ void printTransmissionBuffer(UCHAR *aucTransmitBuffer) {
  * Initializes the ANT service, resetting system and setting network key
  * @return
  */
-BOOL AntService::InitANT()
-{
+BOOL AntService::InitANT() {
     BOOL bStatus;
 
     // Reset system
@@ -212,39 +207,33 @@ BOOL AntService::InitANT()
  * @param pvParameter_
  * @return
  */
-DSI_THREAD_RETURN AntService::RunMessageThread(void *pvParameter_)
-{
-    ((AntService*) pvParameter_)->MessageThread();
+DSI_THREAD_RETURN AntService::RunMessageThread(void *pvParameter_) {
+    ((AntService *) pvParameter_)->MessageThread();
     return nullptr;
 }
 
 /**
  * Entry point for message thread. Checks for received messages and processes these
  */
-void AntService::MessageThread()
-{
+void AntService::MessageThread() {
     ANT_MESSAGE stMessage;
     USHORT usSize;
     bDone = FALSE;
 
-    while(!bDone)
-    {
-        if(pclMessageObject->WaitForMessage(1000))
-        {
+    while (!bDone) {
+        if (pclMessageObject->WaitForMessage(1000)) {
             usSize = pclMessageObject->GetMessage(&stMessage);
 
-            if(bDone)
+            if (bDone)
                 break;
 
-            if(usSize == DSI_FRAMER_ERROR)
-            {
+            if (usSize == DSI_FRAMER_ERROR) {
                 // Get the message to clear the error
                 pclMessageObject->GetMessage(&stMessage, MESG_MAX_SIZE_VALUE);
                 continue;
             }
 
-            if(usSize != DSI_FRAMER_ERROR && usSize != DSI_FRAMER_TIMEDOUT && usSize != 0)
-            {
+            if (usSize != DSI_FRAMER_ERROR && usSize != DSI_FRAMER_TIMEDOUT && usSize != 0) {
                 ProcessMessage(stMessage);
             }
         }
@@ -257,257 +246,239 @@ void AntService::MessageThread()
 }
 
 
+void AntService::ProcessNetworkKeyResponse(ANT_MESSAGE stMessage) {
+    if (bVerbose) {
+        std::cout << "Network key set" << std::endl;
+        std::cout << "Assigning channel: " << +nInitialisedProfiles << std::endl;
+    }
+    pclMessageObject->AssignChannel(nInitialisedProfiles,
+                                    antProfiles[nInitialisedProfiles]->GetChannelType(),
+                                    USER_NETWORK_NUM,
+                                    MESSAGE_TIMEOUT);
+    currentlyInitialisingProfile = true;
+}
+
+void AntService::ProcessAssignChannelResponse(unsigned char ucChannelNr) {
+    if (bVerbose) {
+        std::cout << "Channel assigned " << +ucChannelNr << std::endl;
+        std::cout << "Setting channel ID" << std::endl;
+    }
+    if (currentlyInitialisingProfile) {
+        pclMessageObject->SetChannelID(nInitialisedProfiles,
+                                       antProfiles[nInitialisedProfiles]->GetDeviceNum(),
+                                       antProfiles[nInitialisedProfiles]->GetDeviceType(),
+                                       antProfiles[nInitialisedProfiles]->GetTransType(),
+                                       MESSAGE_TIMEOUT);
+    }
+}
+
+void AntService::ProcessChannelIDResponse(unsigned char ucChannelNr) {
+    if (bVerbose) {
+        std::cout << "Channel ID set: " << +ucChannelNr << std::endl;
+        std::cout << "Setting Radio Frequency: " << USER_RADIOFREQ << std::endl;
+    }
+
+    if (currentlyInitialisingProfile) {
+        pclMessageObject->SetChannelRFFrequency(nInitialisedProfiles,
+                                                USER_RADIOFREQ,
+                                                MESSAGE_TIMEOUT);
+    }
+}
+
+void AntService::ProcessChannelRadioFreq(unsigned char ucChannelNr) {
+    if (bVerbose) {
+        std::cout << "Radio frequency set at channel: " << +ucChannelNr << std::endl;
+        std::cout << "Opening channel" << std::endl;
+    }
+
+    if (currentlyInitialisingProfile) {
+        pclMessageObject->SetChannelPeriod(nInitialisedProfiles,
+                                           antProfiles[nInitialisedProfiles]->GetChannelPeriod());
+        pclMessageObject->OpenChannel(nInitialisedProfiles,
+                                      MESSAGE_TIMEOUT);
+        nInitialisedProfiles++;
+        currentlyInitialisingProfile = false;
+    }
+    if (nInitialisedProfiles < antProfiles.size()) {
+        pclMessageObject->AssignChannel(nInitialisedProfiles,
+                                        antProfiles[nInitialisedProfiles]->GetChannelType(),
+                                        USER_NETWORK_NUM,
+                                        MESSAGE_TIMEOUT);
+        currentlyInitialisingProfile = true;
+    }
+}
+
+void AntService::ProcessMessageEvent(ANT_MESSAGE stMessage, unsigned char ucChannelNr) {
+    switch (stMessage.aucData[2]) {
+        case EVENT_CHANNEL_CLOSED: {
+            if (bVerbose) {
+                std::cout << "Channel closed: " << +ucChannelNr << std::endl;
+                std::cout << "Unassigning channel" << std::endl;
+            }
+            pclMessageObject->UnAssignChannel(ucChannelNr, MESSAGE_TIMEOUT);
+
+        }
+        case EVENT_TX: {
+            antProfiles[ucChannelNr]->HandleTXEvent((unsigned char *) &aucTransmitBuffer);
+            pclMessageObject->SendBroadcastData(ucChannelNr, aucTransmitBuffer);
+            break;
+
+        }
+        case EVENT_TRANSFER_TX_FAILED: {
+            if (bVerbose)
+                std::cerr << "Transfer failed" << std::endl;
+            break;
+        }
+        case EVENT_CHANNEL_COLLISION: {
+            if (bVerbose)
+                std::cerr << "Channel collision" << std::endl;
+            break;
+        }
+        default: {
+            if (bVerbose)
+                std::cerr << "Unhandled channel event: 0x" << std::hex << stMessage.aucData[2]
+                          << std::endl;
+            break;
+        }
+    }
+}
+
+void AntService::ProcessResponseEvent(ANT_MESSAGE stMessage) {
+    UCHAR ucChannelNr = pclMessageObject->GetChannelNumber(&stMessage);
+    //RESPONSE TYPE
+    switch (stMessage.aucData[1]) {
+        case MESG_NETWORK_KEY_ID: {
+            if (stMessage.aucData[2] != RESPONSE_NO_ERROR) {
+                std::cerr << "Error configuring network key: Code " << stMessage.aucData[2] << std::endl;
+                break;
+            }
+            ProcessNetworkKeyResponse(stMessage);
+            break;
+        }
+        case MESG_ASSIGN_CHANNEL_ID: {
+            if (stMessage.aucData[2] != RESPONSE_NO_ERROR) {
+                std::cerr << "Error assigning channel: Code " << stMessage.aucData[2] << std::endl;
+                break;
+            }
+            ProcessAssignChannelResponse(ucChannelNr);
+            break;
+        }
+        case MESG_CHANNEL_ID_ID: {
+            if (stMessage.aucData[2] != RESPONSE_NO_ERROR) {
+                std::cerr << "Error configuring channel ID: Code 0x" << std::hex << stMessage.aucData[2]
+                          << std::endl;
+                break;
+            }
+            ProcessChannelIDResponse(ucChannelNr);
+            break;
+        }
+        case MESG_CHANNEL_RADIO_FREQ_ID: {
+            if (stMessage.aucData[2] != RESPONSE_NO_ERROR) {
+                std::cerr << "Error configuring radio frequency: Code 0x" << std::hex << stMessage.aucData[2]
+                          << std::endl;
+                break;
+            }
+            ProcessChannelRadioFreq(ucChannelNr);
+            break;
+        }
+        case MESG_OPEN_CHANNEL_ID: {
+            if (stMessage.aucData[2] != RESPONSE_NO_ERROR) {
+                std::cerr << "Error opening channel: " << +ucChannelNr
+                          << "Code: 0x" << std::dec << +stMessage.aucData[2] << std::endl;
+
+                break;
+            }
+            if (bVerbose)
+                std::cout << "Channel opened: " << +ucChannelNr << std::endl;
+#if defined (ENABLE_EXTENDED_MESSAGES)
+            if (bVerbose)
+                std::cout << "Enabling extended messages" << std::endl;
+            pclMessageObject->RxExtMesgsEnable(TRUE);
+#endif
+            break;
+        }
+        case MESG_EVENT_ID: {
+            ProcessMessageEvent(stMessage, ucChannelNr);
+            break;
+        }
+        case MESG_RX_EXT_MESGS_ENABLE_ID: {
+            if (stMessage.aucData[2] == INVALID_MESSAGE) {
+                std::cerr << "Extended messages not supported in this ANT product" << std::endl;
+                break;
+            } else if (stMessage.aucData[2] != RESPONSE_NO_ERROR) {
+                std::cerr << "Error enabling extended messages: Code " << std::dec << +stMessage.aucData[2]
+                          << std::endl;
+                break;
+            }
+            if (bVerbose)
+                std::cout << "Extended messages enabled" << std::endl;
+            break;
+        }
+
+        case MESG_UNASSIGN_CHANNEL_ID: {
+            if (stMessage.aucData[2] != RESPONSE_NO_ERROR) {
+                std::cerr << "Error unassigning channel: Code " << std::dec << +stMessage.aucData[2]
+                          << std::endl;
+                break;
+            }
+            if (bVerbose) {
+                std::cout << "Channel unassigned" << std::endl;
+            }
+            break;
+        }
+
+        case MESG_CLOSE_CHANNEL_ID: {
+            if (stMessage.aucData[2] == CHANNEL_IN_WRONG_STATE) {
+                // We get here if we tried to close the channel after the search timeout (slave)
+                if (bVerbose) {
+                    std::cout << "Channel is already closed" << std::endl;
+                    std::cout << "Unassigning channel" << std::endl;
+                }
+                pclMessageObject->UnAssignChannel(ucChannelNr, MESSAGE_TIMEOUT);
+            } else if (stMessage.aucData[2] != RESPONSE_NO_ERROR) {
+                std::cerr << "Error closing channel: Code " << std::dec << +stMessage.aucData[2] << std::endl;
+                break;
+            }
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+}
 
 /**
  * Process the received messages, including event messages and thus ensures that channels are initialized properly
  * @param stMessage message received
  */
-void AntService::ProcessMessage(ANT_MESSAGE stMessage)
-{
-    switch(stMessage.ucMessageID)
-    {
+void AntService::ProcessMessage(ANT_MESSAGE stMessage) {
+    switch (stMessage.ucMessageID) {
         //RESPONSE MESG
-        case MESG_RESPONSE_EVENT_ID:
-        {
-            UCHAR ucChannelNr = pclMessageObject->GetChannelNumber(&stMessage);
-            //RESPONSE TYPE
-            switch(stMessage.aucData[1])
-            {
-                case MESG_NETWORK_KEY_ID:
-                {
-                    if(stMessage.aucData[2] != RESPONSE_NO_ERROR)
-                    {
-                        std::cerr << "Error configuring network key: Code " << stMessage.aucData[2] << std::endl;
-                        break;
-                    }
-
-                    if (bVerbose) {
-                        std::cout << "Network key set" << std::endl;
-                        std::cout << "Assigning channel: " << +nInitialisedProfiles << std::endl;
-                    }
-                    pclMessageObject->AssignChannel(nInitialisedProfiles,
-                                                    antProfiles[nInitialisedProfiles]->GetChannelType(),
-                                                    USER_NETWORK_NUM,
-                                                    MESSAGE_TIMEOUT);
-                    currentlyInitialisingProfile = true;
-                    break;
-                }
-
-                case MESG_ASSIGN_CHANNEL_ID:
-                {
-                    if(stMessage.aucData[2] != RESPONSE_NO_ERROR)
-                    {
-                        std::cerr << "Error assigning channel: Code " << stMessage.aucData[2] << std::endl;
-                        break;
-                    }
-                    if (bVerbose) {
-                        std::cout << "Channel assigned " << +ucChannelNr << std::endl;
-                        std::cout << "Setting channel ID" << std::endl;
-                    }
-                    if (currentlyInitialisingProfile) {
-                        pclMessageObject->SetChannelID(nInitialisedProfiles,
-                                                       antProfiles[nInitialisedProfiles]->GetDeviceNum(),
-                                                       antProfiles[nInitialisedProfiles]->GetDeviceType(),
-                                                       antProfiles[nInitialisedProfiles]->GetTransType(),
-                                                       MESSAGE_TIMEOUT);
-                    }
-                    break;
-                }
-
-                case MESG_CHANNEL_ID_ID:
-                {
-                    if(stMessage.aucData[2] != RESPONSE_NO_ERROR)
-                    {
-                        std::cerr << "Error configuring channel ID: Code 0x" << std::hex << stMessage.aucData[2] << std::endl;
-                        break;
-                    }
-                    if (bVerbose) {
-                        std::cout << "Channel ID set: " << +ucChannelNr << std::endl;
-                        std::cout << "Setting Radio Frequency: " << USER_RADIOFREQ <<  std::endl;
-                    }
-
-                    if (currentlyInitialisingProfile) {
-                        pclMessageObject->SetChannelRFFrequency(nInitialisedProfiles,
-                                                                USER_RADIOFREQ,
-                                                                MESSAGE_TIMEOUT);
-                    }
-
-                    break;
-                }
-
-                case MESG_CHANNEL_RADIO_FREQ_ID:
-                {
-                    if(stMessage.aucData[2] != RESPONSE_NO_ERROR)
-                    {
-                        std::cerr << "Error configuring radio frequency: Code 0x" << std::hex << stMessage.aucData[2] << std::endl;
-                        break;
-                    }
-                    if (bVerbose) {
-                        std::cout << "Radio frequency set at channel: " << +ucChannelNr << std::endl;
-                        std::cout << "Opening channel" << std::endl;
-                    }
-
-
-                    if (currentlyInitialisingProfile) {
-                        pclMessageObject->SetChannelPeriod(nInitialisedProfiles,
-                                                           antProfiles[nInitialisedProfiles]->GetChannelPeriod());
-                        pclMessageObject->OpenChannel(nInitialisedProfiles,
-                                                      MESSAGE_TIMEOUT);
-                        nInitialisedProfiles++;
-                        currentlyInitialisingProfile = false;
-                    }
-                    if (nInitialisedProfiles < antProfiles.size()) {
-                        pclMessageObject->AssignChannel(nInitialisedProfiles,
-                                                        antProfiles[nInitialisedProfiles]->GetChannelType(),
-                                                        USER_NETWORK_NUM,
-                                                        MESSAGE_TIMEOUT);
-                        currentlyInitialisingProfile = true;
-                    }
-                    break;
-                }
-
-                case MESG_OPEN_CHANNEL_ID:
-                {
-                    if(stMessage.aucData[2] != RESPONSE_NO_ERROR)
-                    {
-                        std::cerr << "Error opening channel: " << +ucChannelNr
-                                  << "Code: 0x" << std::dec << +stMessage.aucData[2] << std::endl;
-
-                        break;
-                    }
-                    if (bVerbose)
-                        std::cout << "Channel opened: " << +ucChannelNr << std::endl;
-#if defined (ENABLE_EXTENDED_MESSAGES)
-                    if (bVerbose)
-                        std::cout << "Enabling extended messages" << std::endl;
-                    pclMessageObject->RxExtMesgsEnable(TRUE);
-#endif
-                    break;
-                }
-
-                case MESG_RX_EXT_MESGS_ENABLE_ID:
-                {
-                    if(stMessage.aucData[2] == INVALID_MESSAGE)
-                    {
-                        std::cerr << "Extended messages not supported in this ANT product" << std::endl;
-                        break;
-                    }
-                    else if(stMessage.aucData[2] != RESPONSE_NO_ERROR)
-                    {
-                        std::cerr << "Error enabling extended messages: Code " << std::dec << +stMessage.aucData[2] << std::endl;
-                        break;
-                    }
-                    if (bVerbose)
-                        std::cout << "Extended messages enabled" << std::endl;
-                    break;
-                }
-
-                case MESG_UNASSIGN_CHANNEL_ID:
-                {
-                    if(stMessage.aucData[2] != RESPONSE_NO_ERROR)
-                    {
-                        std::cerr << "Error unassigning channel: Code " << std::dec << +stMessage.aucData[2] << std::endl;
-                        break;
-                    }
-                    if (bVerbose) {
-                        std::cout << "Channel unassigned" << std::endl;
-                    }
-                    break;
-                }
-
-                case MESG_CLOSE_CHANNEL_ID:
-                {
-                    if(stMessage.aucData[2] == CHANNEL_IN_WRONG_STATE)
-                    {
-                        // We get here if we tried to close the channel after the search timeout (slave)
-                        if (bVerbose) {
-                            std::cout << "Channel is already closed" << std::endl;
-                            std::cout << "Unassigning channel" << std::endl;
-                        }
-                        pclMessageObject->UnAssignChannel(ucChannelNr, MESSAGE_TIMEOUT);
-                    }
-                    else if(stMessage.aucData[2] != RESPONSE_NO_ERROR)
-                    {
-                        std::cerr << "Error closing channel: Code " <<  std::dec << +stMessage.aucData[2] << std::endl;
-                        break;
-                    }
-                    break;
-                }
-                case MESG_EVENT_ID:
-                {
-                    switch(stMessage.aucData[2])
-                    {
-                        case EVENT_CHANNEL_CLOSED:
-                        {
-                            if (bVerbose) {
-                                std::cout << "Channel closed: " << +ucChannelNr << std::endl;
-                                std::cout << "Unassigning channel" << std::endl;
-                            }
-                            pclMessageObject->UnAssignChannel(ucChannelNr, MESSAGE_TIMEOUT);
-
-                        }
-                        case EVENT_TX:
-                        {
-                            antProfiles[ucChannelNr]->HandleTXEvent((unsigned char*) &aucTransmitBuffer);
-                            pclMessageObject->SendBroadcastData(ucChannelNr, aucTransmitBuffer);
-                            break;
-
-                        }
-                        case EVENT_TRANSFER_TX_FAILED:
-                        {
-                            if (bVerbose)
-                                std::cerr << "Transfer failed" << std::endl;
-                            break;
-                        }
-                        case EVENT_CHANNEL_COLLISION:
-                        {
-                            if (bVerbose)
-                                std::cerr << "Channel collision" << std::endl;
-                            break;
-                        }
-                        default:
-                        {
-                            if (bVerbose)
-                                std::cerr << "Unhandled channel event: 0x" << std::hex << stMessage.aucData[2] << std::endl;
-                            break;
-                        }
-
-                    }
-
-                    break;
-                }
-
-                default:
-                {
-                    break;
-                }
-            }
+        case MESG_RESPONSE_EVENT_ID: {
+            ProcessResponseEvent(stMessage);
             break;
         }
-
-        case MESG_STARTUP_MESG_ID:
-        {
+        case MESG_STARTUP_MESG_ID: {
             if (bVerbose) {
                 std::cout << "Reset complete, reason: ";
                 UCHAR ucReason = stMessage.aucData[MESSAGE_BUFFER_DATA1_INDEX];
-                if(ucReason == RESET_POR)
+                if (ucReason == RESET_POR)
                     std::cout << "RESET_POR";
-                if(ucReason & RESET_SUSPEND)
+                if (ucReason & RESET_SUSPEND)
                     std::cout << "RESET_SUSPEND";
-                if(ucReason & RESET_SYNC)
+                if (ucReason & RESET_SYNC)
                     std::cout << "RESET_SYNC";
-                if(ucReason & RESET_CMD)
+                if (ucReason & RESET_CMD)
                     std::cout << "RESET_CMD";
-                if(ucReason & RESET_WDT)
+                if (ucReason & RESET_WDT)
                     std::cout << "RESET_WDT";
-                if(ucReason & RESET_RST)
+                if (ucReason & RESET_RST)
                     std::cout << "RESET_RST";
                 std::cout << std::endl;
             }
             break;
         }
-        default:
-        {
+        default: {
             break;
         }
     }

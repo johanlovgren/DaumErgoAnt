@@ -55,6 +55,12 @@ private:
     static DSI_THREAD_RETURN RunMessageThread(void *pvParameter_);
     void MessageThread();
     void ProcessMessage(ANT_MESSAGE stMessage);
+    void ProcessResponseEvent(ANT_MESSAGE stMessage);
+    void ProcessNetworkKeyResponse(ANT_MESSAGE stMessage);
+    void ProcessAssignChannelResponse(unsigned char ucChannelNr);
+    void ProcessChannelIDResponse(unsigned char ucChannelNr);
+    void ProcessChannelRadioFreq(unsigned char ucChannelNr);
+    void ProcessMessageEvent(ANT_MESSAGE stMessage, unsigned char ucChannelNr);
 
     vector<AntProfile*> antProfiles;
 
