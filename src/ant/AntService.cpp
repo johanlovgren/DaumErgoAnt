@@ -19,68 +19,23 @@
 #define USER_BAUDRATE         (57600)  // For AT3/AP2, use 57600
 #define USER_RADIOFREQ        (57) // RF Frequency + 2400
 
-#define POWER_ANTCHANNEL   (1) // Power sensor channel
-#define SPD_CDC_ANTCHANNEL (0) // Speed sensor channel
-#define POWER_DEVICENUM    (49) // Power sensor number
-#define SPD_CDC_DEVICENUM  (50) // Speed sensor
-#define POWER_DEVICETYPE   (11) // Power sensor
-#define SPD_CDC_DEVICETYPE (121)// Speed & cdc sensor
-#define USER_TRANSTYPE     (1)
-#define POWER_PERIOD       (8182)
-#define SPD_CDC_PERIOD     (8086)
-#define SPEED_CIRCUMFERENCE    (2100) // The circumference of the wheel for speed calculation
-
 #define USER_NETWORK_NUM      (0)      // The network key is assigned to this network number
-
 #define MESSAGE_TIMEOUT       (1000)
-
-// Indexes into message recieved from ANT
-#define MESSAGE_BUFFER_DATA1_INDEX ((UCHAR) 0)
-#define MESSAGE_BUFFER_DATA2_INDEX ((UCHAR) 1)
-#define MESSAGE_BUFFER_DATA3_INDEX ((UCHAR) 2)
-#define MESSAGE_BUFFER_DATA4_INDEX ((UCHAR) 3)
-#define MESSAGE_BUFFER_DATA5_INDEX ((UCHAR) 4)
-#define MESSAGE_BUFFER_DATA6_INDEX ((UCHAR) 5)
-#define MESSAGE_BUFFER_DATA7_INDEX ((UCHAR) 6)
-#define MESSAGE_BUFFER_DATA8_INDEX ((UCHAR) 7)
-#define MESSAGE_BUFFER_DATA9_INDEX ((UCHAR) 8)
-#define MESSAGE_BUFFER_DATA10_INDEX ((UCHAR) 9)
-#define MESSAGE_BUFFER_DATA11_INDEX ((UCHAR) 10)
-#define MESSAGE_BUFFER_DATA12_INDEX ((UCHAR) 11)
-#define MESSAGE_BUFFER_DATA13_INDEX ((UCHAR) 12)
-#define MESSAGE_BUFFER_DATA14_INDEX ((UCHAR) 13)
 
 // ----------------------- Public -------------------------------
 
-AntService::AntService(DaumErgo *ergo, bool verbose)
+AntService::AntService(bool verbose)
 {
     pclSerialObject = (DSISerialGeneric*)nullptr;
     pclMessageObject = (DSIFramerANT*)nullptr;
     uiDSIThread = (DSI_THREAD_ID)nullptr;
-    bMyDone = FALSE;
     bDone = FALSE;
-    bBroadcastingSpdCdc = FALSE;
-    bBroadcastingPower = FALSE;
-
     initialised = FALSE;
 
-
-    this->ergo = ergo;
     bVerbose = verbose;
-    cumulativePower = 0;
-    updateEventCountPower = 0;
 
-    usCumWheelRev = 0;
-    usLastWheelEvent = 0;
-    usCumCranks = 0;
-    usLastCrankEvent = 0;
-
-    usWheelRevPeriod = 0;
-    usCrankRevPeriod = 0;
-
-    nextSpdTransmit = 0;
-    nextCdcTransmit = 0;
-
+    nInitialisedProfiles = 0;
+    currentlyInitialisingProfile = false;
     memset(aucTransmitBuffer,0,ANT_STANDARD_DATA_PAYLOAD_SIZE);
 }
 
@@ -88,6 +43,15 @@ AntService::~AntService()
 {
     delete pclMessageObject;
     delete pclSerialObject;
+}
+
+bool AntService::AddAntProfile(AntProfile *antProfile) {
+    if (antProfiles.size() >= MAX_ANT_CHANNELS)
+        return false;
+
+    antProfile->SetChannelNumber(antProfiles.size());
+    antProfiles.push_back(antProfile);
+    return true;
 }
 
 BOOL AntService::Init(UCHAR ucUSBDeviceNumber_)
@@ -139,8 +103,7 @@ BOOL AntService::Init(UCHAR ucUSBDeviceNumber_)
     // If the Open function failed, most likely the device
     // we are trying to access does not exist, or it is connected
     // to another program
-    if(!bStatus)
-    {
+    if(!bStatus) {
         std::cerr << "Failed to connect to ANT device at USB port " << ucUSBDeviceNumber_ << std::endl;
         return FALSE;
     }
@@ -165,10 +128,12 @@ void AntService::Close()
 {
     if (!initialised)
         return;
-    bBroadcastingSpdCdc = FALSE;
-    bBroadcastingPower = FALSE;
-    pclMessageObject->CloseChannel(SPD_CDC_ANTCHANNEL, MESSAGE_TIMEOUT);
-    pclMessageObject->CloseChannel(POWER_ANTCHANNEL, MESSAGE_TIMEOUT);
+
+    for (int i = 0; i < antProfiles.size(); ++i) {
+        pclMessageObject->CloseChannel(i, MESSAGE_TIMEOUT);
+        // TODO Fix syncronize
+        DSIThread_Sleep(500);
+    }
 
     DSIThread_Sleep(0);
 
@@ -315,14 +280,16 @@ void AntService::ProcessMessage(ANT_MESSAGE stMessage)
                         std::cerr << "Error configuring network key: Code " << stMessage.aucData[2] << std::endl;
                         break;
                     }
+
                     if (bVerbose) {
                         std::cout << "Network key set" << std::endl;
-                        std::cout << "Assigning channel: " << POWER_ANTCHANNEL << std::endl;
+                        std::cout << "Assigning channel: " << +nInitialisedProfiles << std::endl;
                     }
-                    pclMessageObject->AssignChannel(POWER_ANTCHANNEL,
-                                                    PARAMETER_TX_NOT_RX,
-                                                    0,
+                    pclMessageObject->AssignChannel(nInitialisedProfiles,
+                                                    antProfiles[nInitialisedProfiles]->GetChannelType(),
+                                                    USER_NETWORK_NUM,
                                                     MESSAGE_TIMEOUT);
+                    currentlyInitialisingProfile = true;
                     break;
                 }
 
@@ -334,29 +301,14 @@ void AntService::ProcessMessage(ANT_MESSAGE stMessage)
                         break;
                     }
                     if (bVerbose) {
-                        std::cout << "Channel assigned " << ucChannelNr << std::endl;
+                        std::cout << "Channel assigned " << +ucChannelNr << std::endl;
                         std::cout << "Setting channel ID" << std::endl;
                     }
-                    if (ucChannelNr == POWER_ANTCHANNEL) {
-                        pclMessageObject->SetChannelID(POWER_ANTCHANNEL,
-                                                       POWER_DEVICENUM,
-                                                       POWER_DEVICETYPE,
-                                                       USER_TRANSTYPE,
-                                                       MESSAGE_TIMEOUT);
-                        if (bVerbose)
-                            std::cout << "Assigning channel: " << SPD_CDC_ANTCHANNEL << std::endl;
-
-
-                        pclMessageObject->AssignChannel(SPD_CDC_ANTCHANNEL,
-                                                        PARAMETER_TX_NOT_RX,
-                                                        0,
-                                                        MESSAGE_TIMEOUT);
-                    }
-                    else if (ucChannelNr == SPD_CDC_ANTCHANNEL) {
-                        pclMessageObject->SetChannelID(SPD_CDC_ANTCHANNEL,
-                                                       SPD_CDC_DEVICENUM,
-                                                       SPD_CDC_DEVICETYPE,
-                                                       USER_TRANSTYPE,
+                    if (currentlyInitialisingProfile) {
+                        pclMessageObject->SetChannelID(nInitialisedProfiles,
+                                                       antProfiles[nInitialisedProfiles]->GetDeviceNum(),
+                                                       antProfiles[nInitialisedProfiles]->GetDeviceType(),
+                                                       antProfiles[nInitialisedProfiles]->GetTransType(),
                                                        MESSAGE_TIMEOUT);
                     }
                     break;
@@ -371,18 +323,15 @@ void AntService::ProcessMessage(ANT_MESSAGE stMessage)
                     }
                     if (bVerbose) {
                         std::cout << "Channel ID set: " << +ucChannelNr << std::endl;
-                        std::cout << "Setting Radio Frequency" << std::endl;
+                        std::cout << "Setting Radio Frequency: " << USER_RADIOFREQ <<  std::endl;
                     }
-                    if (ucChannelNr == POWER_ANTCHANNEL) {
-                        pclMessageObject->SetChannelRFFrequency(POWER_ANTCHANNEL,
+
+                    if (currentlyInitialisingProfile) {
+                        pclMessageObject->SetChannelRFFrequency(nInitialisedProfiles,
                                                                 USER_RADIOFREQ,
                                                                 MESSAGE_TIMEOUT);
                     }
-                    else if (ucChannelNr == SPD_CDC_ANTCHANNEL) {
-                        pclMessageObject->SetChannelRFFrequency(SPD_CDC_ANTCHANNEL,
-                                                                USER_RADIOFREQ,
-                                                                MESSAGE_TIMEOUT);
-                    }
+
                     break;
                 }
 
@@ -394,23 +343,26 @@ void AntService::ProcessMessage(ANT_MESSAGE stMessage)
                         break;
                     }
                     if (bVerbose) {
-                        std::cout << "Radio frequency set: " << +ucChannelNr << std::endl;
+                        std::cout << "Radio frequency set at channel: " << +ucChannelNr << std::endl;
                         std::cout << "Opening channel" << std::endl;
                     }
 
 
-                    if (ucChannelNr == POWER_ANTCHANNEL) {
-                        pclMessageObject->SetChannelPeriod(POWER_ANTCHANNEL, POWER_PERIOD);
-                        pclMessageObject->OpenChannel(POWER_ANTCHANNEL, MESSAGE_TIMEOUT);
-                        bBroadcastingSpdCdc = TRUE;
+                    if (currentlyInitialisingProfile) {
+                        pclMessageObject->SetChannelPeriod(nInitialisedProfiles,
+                                                           antProfiles[nInitialisedProfiles]->GetChannelPeriod());
+                        pclMessageObject->OpenChannel(nInitialisedProfiles,
+                                                      MESSAGE_TIMEOUT);
+                        nInitialisedProfiles++;
+                        currentlyInitialisingProfile = false;
                     }
-
-                    else if (ucChannelNr == SPD_CDC_ANTCHANNEL){
-                        pclMessageObject->SetChannelPeriod(SPD_CDC_ANTCHANNEL, SPD_CDC_PERIOD);
-                        pclMessageObject->OpenChannel(SPD_CDC_ANTCHANNEL, MESSAGE_TIMEOUT);
-                        bBroadcastingPower = TRUE;
+                    if (nInitialisedProfiles < antProfiles.size()) {
+                        pclMessageObject->AssignChannel(nInitialisedProfiles,
+                                                        antProfiles[nInitialisedProfiles]->GetChannelType(),
+                                                        USER_NETWORK_NUM,
+                                                        MESSAGE_TIMEOUT);
+                        currentlyInitialisingProfile = true;
                     }
-
                     break;
                 }
 
@@ -418,12 +370,9 @@ void AntService::ProcessMessage(ANT_MESSAGE stMessage)
                 {
                     if(stMessage.aucData[2] != RESPONSE_NO_ERROR)
                     {
-                        if (ucChannelNr == SPD_CDC_ANTCHANNEL)
-                            bBroadcastingSpdCdc = FALSE;
-                        else if (ucChannelNr == POWER_ANTCHANNEL)
-                            bBroadcastingPower = FALSE;
                         std::cerr << "Error opening channel: " << +ucChannelNr
                                   << "Code: 0x" << std::dec << +stMessage.aucData[2] << std::endl;
+
                         break;
                     }
                     if (bVerbose)
@@ -463,7 +412,6 @@ void AntService::ProcessMessage(ANT_MESSAGE stMessage)
                     if (bVerbose) {
                         std::cout << "Channel unassigned" << std::endl;
                     }
-                    bMyDone = TRUE;
                     break;
                 }
 
@@ -476,10 +424,7 @@ void AntService::ProcessMessage(ANT_MESSAGE stMessage)
                             std::cout << "Channel is already closed" << std::endl;
                             std::cout << "Unassigning channel" << std::endl;
                         }
-                        if (ucChannelNr == SPD_CDC_ANTCHANNEL)
-                            pclMessageObject->UnAssignChannel(SPD_CDC_ANTCHANNEL, MESSAGE_TIMEOUT);
-                        else if (ucChannelNr == POWER_ANTCHANNEL)
-                            pclMessageObject->UnAssignChannel(POWER_ANTCHANNEL, MESSAGE_TIMEOUT);
+                        pclMessageObject->UnAssignChannel(ucChannelNr, MESSAGE_TIMEOUT);
                     }
                     else if(stMessage.aucData[2] != RESPONSE_NO_ERROR)
                     {
@@ -498,20 +443,13 @@ void AntService::ProcessMessage(ANT_MESSAGE stMessage)
                                 std::cout << "Channel closed: " << +ucChannelNr << std::endl;
                                 std::cout << "Unassigning channel" << std::endl;
                             }
+                            pclMessageObject->UnAssignChannel(ucChannelNr, MESSAGE_TIMEOUT);
 
-                            if (ucChannelNr == SPD_CDC_ANTCHANNEL)
-                                pclMessageObject->UnAssignChannel(SPD_CDC_ANTCHANNEL, MESSAGE_TIMEOUT);
-                            else if (ucChannelNr == POWER_ANTCHANNEL)
-                                pclMessageObject->UnAssignChannel(POWER_ANTCHANNEL, MESSAGE_TIMEOUT);
                         }
                         case EVENT_TX:
                         {
-
-                            if (ucChannelNr == POWER_ANTCHANNEL)
-                                TransmitPower(ergo->GetPower());
-                            else if (ucChannelNr == SPD_CDC_ANTCHANNEL)
-                                TransmitSpdCdc(ergo->GetSpeed(), ergo->GetCadence());
-
+                            antProfiles[ucChannelNr]->HandleTXEvent((unsigned char*) &aucTransmitBuffer);
+                            pclMessageObject->SendBroadcastData(ucChannelNr, aucTransmitBuffer);
                             break;
 
                         }
@@ -541,7 +479,6 @@ void AntService::ProcessMessage(ANT_MESSAGE stMessage)
 
                 default:
                 {
-                    //printf("Unhandled response 0%d to message 0x%X\n", stMessage.aucData[2], stMessage.aucData[1]);
                     break;
                 }
             }
@@ -574,64 +511,4 @@ void AntService::ProcessMessage(ANT_MESSAGE stMessage)
             break;
         }
     }
-}
-
-/**
- * Sets up the transmission buffer for transmitting current ergo power data
- * @param power current ergo power to transmit
- */
-void AntService::TransmitPower(USHORT power) {
-    if (!bBroadcastingPower)
-        return;
-
-    cumulativePower += power;
-
-    aucTransmitBuffer[0] = 0x10; // Standard Power-Only message
-    aucTransmitBuffer[1] = updateEventCountPower++; // Update event count
-    aucTransmitBuffer[2] = 0xFF; // Pedal Power off
-    aucTransmitBuffer[3] = 0xFF; // Cadence set invalid
-    aucTransmitBuffer[4] = cumulativePower; // Accumulated power LSB
-    aucTransmitBuffer[5] = (cumulativePower >> 8) & 0xFF; // Accumulated power MSB
-    aucTransmitBuffer[6] = power; // Power LSB
-    aucTransmitBuffer[7] = power >> 8; // Power MSB
-    pclMessageObject->SendBroadcastData(POWER_ANTCHANNEL, aucTransmitBuffer);
-}
-
-/**
- * Sets up the transmission buffer for transmitting current speed and cadence data
- * @param speed current ergo speed to transmit
- * @param cadence current ergo cadence to transmit
- */
-void AntService::TransmitSpdCdc(USHORT speed, USHORT cadence) {
-    if (!bBroadcastingSpdCdc)
-        return;
-
-    if (!nextCdcTransmit && cadence) {
-        usCumCranks++;
-        // Transforming cadence according to ANT bike power sensor documentation section 6.5.1
-        usCrankRevPeriod = (60 * 1024) / cadence;
-        usLastCrankEvent += usCrankRevPeriod;
-        nextCdcTransmit = lround(4 * ((double) usCrankRevPeriod / (double) 1024));
-    }
-    if (!nextSpdTransmit && speed) {
-        usCumWheelRev++;
-        // Transforming cadence according to ANT bike speed/cadence sensor documentation section 5.5.1
-        usWheelRevPeriod = 36 * 64 * SPEED_CIRCUMFERENCE / (625 * speed);
-        usLastWheelEvent += usWheelRevPeriod;
-        nextSpdTransmit = lround(4 * ((double) usWheelRevPeriod / (double) 1024));
-    }
-    aucTransmitBuffer[MESSAGE_BUFFER_DATA1_INDEX] = usLastCrankEvent; // Last cadence event LSB
-    aucTransmitBuffer[MESSAGE_BUFFER_DATA2_INDEX] = (usLastCrankEvent >> 8) & 0xFF; // Last cadence event MSB
-    aucTransmitBuffer[MESSAGE_BUFFER_DATA3_INDEX] = usCumCranks; // Cumulative pedal revolutions LSB
-    aucTransmitBuffer[MESSAGE_BUFFER_DATA4_INDEX] = usCumCranks >> 8; // Cumulative pedal revolutions MSB
-    aucTransmitBuffer[MESSAGE_BUFFER_DATA5_INDEX] = usLastWheelEvent; // Last speed event LSB
-    aucTransmitBuffer[MESSAGE_BUFFER_DATA6_INDEX] = (usLastWheelEvent >> 8) & 0xFF; // Last speed event MSB
-    aucTransmitBuffer[MESSAGE_BUFFER_DATA7_INDEX] = usCumWheelRev; // Cumulative wheel revolutions LSB
-    aucTransmitBuffer[MESSAGE_BUFFER_DATA8_INDEX] = usCumWheelRev >> 8; // Cumulative wheel revolutions MSB
-
-    pclMessageObject->SendBroadcastData(SPD_CDC_ANTCHANNEL, aucTransmitBuffer);
-    if (speed)
-        nextSpdTransmit--;
-    if (cadence)
-        nextCdcTransmit--;
 }
