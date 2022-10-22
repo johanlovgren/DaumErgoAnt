@@ -11,11 +11,11 @@ void AntProfile::SetChannelNumber(uint8_t number) {
     channelNumber = number;
 }
 
-unsigned short AntProfile::GetDeviceType() const {
+unsigned char AntProfile::GetDeviceType() const {
     return deviceType;
 }
 
-unsigned char AntProfile::GetChannelPeriod() const {
+unsigned short AntProfile::GetChannelPeriod() const {
     return channelPeriod;
 }
 

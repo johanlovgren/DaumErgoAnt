@@ -16,24 +16,28 @@
 #define MESSAGE_BUFFER_DATA7_INDEX 6
 #define MESSAGE_BUFFER_DATA8_INDEX 7
 
+#define CHANNEL_TYPE_MASTER   (0)
+#define CHANNEL_TYPE_SLAVE    (1)
+#define CHANNEL_TYPE_INVALID  (2)
+
 
 class AntProfile {
 public:
     AntProfile();
-    virtual void HandleTXEvent(uint8_t *txBuffer) = 0;
+    virtual void HandleTXEvent(unsigned char *txBuffer) = 0;
 
     void SetChannelNumber(uint8_t number);
-    unsigned char GetChannelPeriod() const;
+    unsigned short GetChannelPeriod() const;
     unsigned char GetTransType() const;
     unsigned char GetChannelType() const;
     unsigned char GetDeviceNum() const;
-    unsigned short GetDeviceType() const;
+    unsigned char GetDeviceType() const;
 
 protected:
     DaumErgo *ergo;
     uint8_t channelNumber;
-    unsigned short deviceType;
-    unsigned char channelPeriod, transType, channelType, deviceNum;
+    unsigned char transType, channelType, deviceNum, deviceType;
+    unsigned short channelPeriod;
 
 };
 #endif //DAUMERGOANT_ANTPROFILE_H

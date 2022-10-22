@@ -6,13 +6,14 @@
 #include "AntBikeSpeedCadence.h"
 #include "../../include/antdefines.h"
 
+#define CHANNEL_PERIOD ((unsigned short) 8086)
 #define SPD_CDC_DEVICE_TYPE ((unsigned char) 121) // Speed & cdc sensor
 #define DEVICE_NUM ((unsigned short) 50)
 #define TRANS_TYPE ((unsigned char) 1)
 #define DEVICE_TYPE ((unsigned short) 121)
 
 #define SPEED_CIRCUMFERENCE 2100 // The circumference of the wheel for speed calculation
-#define CHANNEL_PERIOD ((unsigned char) 8086)
+
 
 AntBikeSpeedCadence::AntBikeSpeedCadence(DaumErgo *ergo) {
     this->ergo = ergo;
@@ -53,9 +54,6 @@ void AntBikeSpeedCadence::HandleTXEvent(unsigned char *txBuffer) {
     txBuffer[MESSAGE_BUFFER_DATA7_INDEX] = cumulativeWheelRev; // Cumulative wheel revolutions LSB
     txBuffer[MESSAGE_BUFFER_DATA8_INDEX] = cumulativeWheelRev >> 8; // Cumulative wheel revolutions MSB
 
-    //pclMessageObject->SendBroadcastData(SPD_CDC_ANTCHANNEL, txBuffer);
-    if (speed)
-        nextSpdTransmit--;
-    if (cadence)
-        nextCdcTransmit--;
+    nextSpdTransmit--;
+    nextCdcTransmit--;
 }
