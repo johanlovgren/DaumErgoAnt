@@ -7,6 +7,8 @@
 
 #include "DaumErgo.h"
 
+#define ARG_TEST "test"
+
 class TestErgo: public DaumErgo {
 public:
     explicit TestErgo();

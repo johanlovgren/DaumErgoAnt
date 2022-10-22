@@ -27,7 +27,7 @@ void TestErgo::SetSpeed(unsigned short speed) {
 }
 
 bool TestErgo::RunDataUpdater() {
-    return false;
+    return true;
 }
 
 bool TestErgo::RunWorkout(std::vector<std::tuple<int, int>> workout) {

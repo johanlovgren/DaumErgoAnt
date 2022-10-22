@@ -6,6 +6,9 @@
 #include "DaumErgoPremium8i.h"
 #include "DaumErgo8008TRS.h"
 #include "AntService.h"
+#include "AntBikeSpeedCadence.h"
+#include "AntBikePower.h"
+#include "TestErgo.h"
 
 using namespace std;
 #define USAGE_COL_WIDTH 25
@@ -78,6 +81,13 @@ bool parseArguments(int argc, char**argv) {
             antDeviceNr = stoi(argv[i + 2], nullptr, 10);
             ergo = new DaumErgo8008TRS(verbose);
             return true;
+        } else if (arg == ARG_TEST) {
+            antDeviceNr = stoi(argv[i + 1], nullptr, 10);
+            ergo = new TestErgo();
+            ((TestErgo*) ergo)->SetPower((unsigned short) 25);
+            ((TestErgo*) ergo)->SetSpeed((unsigned short) 30);
+            ((TestErgo*) ergo)->SetCadence((unsigned short) 80);
+            return true;
         } else if (i == argc - 1) {
             cerr << "Not valid arguments" << endl;
             showUsage();
@@ -88,12 +98,26 @@ bool parseArguments(int argc, char**argv) {
 }
 
 int run() {
-    if (!ergo->Init(param.c_str()))
+    if (!ergo->Init(param.c_str())) {
+        std::cerr << "Failed to initialise Ergo" << std::endl;
         return 1;
-    if (!ergo->RunDataUpdater())
+    }
+    if (!ergo->RunDataUpdater()) {
+        std::cerr << "Failed to run Ergo data updater " << std::endl;
         return 1;
+    }
 
-    auto* antService = new AntService(ergo, verbose);
+    auto *antService = new AntService(verbose);
+    auto *antBikePower = new AntBikePower(ergo);
+    if (!antService->AddAntProfile(antBikePower)) {
+        ergo->Close();
+    }
+    auto *antBikeSpeedCadence = new AntBikeSpeedCadence(ergo);
+    if (!antService->AddAntProfile(antBikeSpeedCadence)) {
+        ergo->Close();
+        return 1;
+    }
+
     if (!antService->Init(antDeviceNr)) {
         ergo->Close();
         return 1;
