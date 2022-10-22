@@ -5,9 +5,7 @@
 #include <vector>
 #include "TestErgo.h"
 
-TestErgo::TestErgo(bool verbose) {
-    this->verbose = verbose;
-}
+TestErgo::TestErgo() { }
 
 
 bool TestErgo::Init(const char *string) {

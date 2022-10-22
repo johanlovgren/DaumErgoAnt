@@ -9,7 +9,7 @@
 
 class TestErgo: public DaumErgo {
 public:
-    explicit TestErgo(bool verbose);
+    explicit TestErgo();
     ~TestErgo();
     void SetPower(unsigned short power);
     void SetCadence(unsigned short cadence);
