@@ -30,7 +30,7 @@ TEST(ANTBikeSpeedCadence, FixedSpeedCadence) {
     unsigned short speedEventTime1, speedEventTime2, cumulativeSpeedRev1, cumulativeSpeedRev2;
     unsigned short currentCadence, currentSpeed;
 
-    for (int i = 1; i < 10000; i+=2) {
+    for (int i = 1; i < 10000; i+=1) {
         bikeSpeedCadence.HandleTXEvent((unsigned char*) &txBuffer1);
         bikeSpeedCadence.HandleTXEvent((unsigned char*) &txBuffer2);
         if (txBuffer1[MESSAGE_BUFFER_DATA1_INDEX] == txBuffer2[MESSAGE_BUFFER_DATA1_INDEX])
