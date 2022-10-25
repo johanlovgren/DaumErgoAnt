@@ -116,25 +116,6 @@ void DaumErgoPremium8i::Close() {
 }
 
 // TODO Implement the following methods
-uint8_t DaumErgoPremium8i::GetEquipmentType() {
-    return 0;
-}
-
-uint16_t DaumErgoPremium8i::GetElapsedTime() {
-    return 0;
-}
-
-uint16_t DaumErgoPremium8i::GetDistanceTraveled() {
-    return 0;
-}
-
-uint8_t DaumErgoPremium8i::GetHeartRate() {
-    return 0;
-}
-
-uint8_t DaumErgoPremium8i::GetCapabilitiesState() {
-    return 0;
-}
 
 uint8_t DaumErgoPremium8i::GetCycleLength() {
     return 0;
@@ -145,18 +126,6 @@ uint8_t DaumErgoPremium8i::GetResistanceLevel() {
 }
 
 uint16_t DaumErgoPremium8i::GetIncline() {
-    return 0;
-}
-
-uint8_t DaumErgoPremium8i::GetFEStateBits() {
-    return 0;
-}
-
-uint8_t DaumErgoPremium8i::GetTargetPowerFlag() {
-    return 0;
-}
-
-uint8_t DaumErgoPremium8i::GetTrainerStatusBitField() {
     return 0;
 }
 
