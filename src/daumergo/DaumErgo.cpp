@@ -19,18 +19,74 @@ unsigned short DaumErgo::GetPower() {
     return power;
 }
 
-unsigned short DaumErgo::GetCadence() {
+uint16_t DaumErgo::GetAccumulatedPower() {
+    dataMutex.lock();
+    uint16_t tmp = accumulatedPower;
+    dataMutex.unlock();
+    return tmp;
+}
+
+uint8_t DaumErgo::GetPowerEventCounter() {
+    dataMutex.lock();
+    uint8_t tmp = updatePowerEventCount;
+    dataMutex.unlock();
+    return tmp;
+}
+
+uint8_t DaumErgo::GetCadence() {
     dataMutex.lock();
     unsigned short cadence = currentCadence;
     dataMutex.unlock();
     return cadence;
 }
 
-unsigned short DaumErgo::GetSpeed() {
+uint16_t DaumErgo::GetSpeed() {
     dataMutex.lock();
     unsigned short speed = currentSpeed;
     dataMutex.unlock();
     return speed;
 }
 
+uint8_t DaumErgo::GetEquipmentType() const {
+    return equipmentType;
+}
 
+uint16_t DaumErgo::GetElapsedTime() {
+    dataMutex.lock();
+    uint16_t tmp = elapsedTime;
+    dataMutex.unlock();
+    return tmp;
+}
+
+uint16_t DaumErgo::GetDistanceTraveled() {
+    dataMutex.lock();
+    uint16_t tmp = distanceTraveled;
+    dataMutex.unlock();
+    return tmp;
+}
+
+uint8_t DaumErgo::GetHeartRate() const {
+    return heartRate;
+}
+
+uint8_t DaumErgo::GetCapabilitiesBits() const {
+    return capabilitiesBits;
+}
+
+uint8_t DaumErgo::GetTrainerPowerStatusBitField() {
+    dataMutex.lock();
+    uint8_t tmp = trainerPowerStatusBitField;
+    dataMutex.unlock();
+    return tmp;
+}
+
+uint8_t DaumErgo::GetFEStateBits() const {
+    return feStateBits;
+}
+
+uint8_t DaumErgo::GetTargetPowerFlag() {
+    dataMutex.lock();
+    uint8_t tmp = targetPowerFlag;
+    dataMutex.unlock();
+    return tmp;
+}

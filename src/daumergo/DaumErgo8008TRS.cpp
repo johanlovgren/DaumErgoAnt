@@ -44,12 +44,26 @@
 #define MAXIMUM_WATT 800
 #define MINIMUM_WATT 25
 
+#define FE_STATE_READY 2
+#define FE_STATE_IN_USE 3
+
 // ----------------------- Public -------------------------------
 
 DaumErgo8008TRS::DaumErgo8008TRS(bool verbose) {
     serial = nullptr;
-    verbose = verbose;
+    this->verbose = verbose;
     ergoAddress = -1;
+    equipmentType = ANT_EQUIPMENT_TYPE;
+    capabilitiesBits = 0;
+    updatePowerEventCount = 0;
+    feStateBits = 2; // Set to READY
+    trainerPowerStatusBitField = 0; // Calibration complete/not required
+    targetPowerFlag = 0; // Trainer operating at the target power, or no target power set.
+    elapsedTime = 0;
+    distanceTraveled = 0;
+    currentSpeed = 0;
+    accumulatedPower = 0;
+    heartRate = 0xFF; // Invalid
 }
 
 DaumErgo8008TRS::~DaumErgo8008TRS() {
@@ -79,7 +93,7 @@ void DaumErgo8008TRS::Close() {
         return;
     }
 
-    done = false;
+    done = true;
     if (verbose)
         std::cout << "Closing serial port" << std::endl;
     serial->Close();
@@ -112,39 +126,7 @@ bool DaumErgo8008TRS::RunWorkout(std::vector<std::tuple<int, int>> time_watt) {
     return true;
 }
 
-uint8_t DaumErgo8008TRS::GetEquipmentType() {
-    return ANT_EQUIPMENT_TYPE;
-}
 
-uint16_t DaumErgo8008TRS::GetElapsedTime() {
-    dataMutex.lock();
-    uint16_t seconds = elapsedTime;
-    dataMutex.unlock();
-    return seconds;
-}
-
-uint16_t DaumErgo8008TRS::GetDistanceTraveled() {
-    dataMutex.lock();
-    uint16_t distance = distanceTraveled;
-    dataMutex.unlock();
-    return distance;
-}
-
-/**
- * Returns the heart rate
- * @return 0xFF, set as Invalid
- */
-uint8_t DaumErgo8008TRS::GetHeartRate() {
-    return 0xFF;
-}
-
-uint8_t DaumErgo8008TRS::GetCapabilitiesState() {
-    return ANT_CAPABILITIES_STATE;
-}
-
-uint8_t DaumErgo8008TRS::GetFEStateBits() {
-    return ANT_FE_BIT_FIELD;
-}
 /**
  * Returns the cycle length, in this case, wheel circumference
  * @return
@@ -166,14 +148,6 @@ uint8_t DaumErgo8008TRS::GetResistanceLevel() {
  */
 uint16_t DaumErgo8008TRS::GetIncline() {
     return 0x7FFF;
-}
-
-uint8_t DaumErgo8008TRS::GetTargetPowerFlag() {
-    return 0;
-}
-
-uint8_t DaumErgo8008TRS::GetTrainerStatusBitField() {
-    return 0;
 }
 
 // ----------------------- Private  -------------------------------
@@ -239,18 +213,21 @@ void DaumErgo8008TRS::UpdateTrainingData() {
         return;
     }
     dataMutex.lock();
+    ++updatePowerEventCount;
     currentProgramme = rxBuffer[PROGRAMME_OFFSET];
     currentUser = rxBuffer[USER_OFFSET];
     currentPower = rxBuffer[POWER_OFFSET] * 5;
+    accumulatedPower += currentPower;
     currentCadence = rxBuffer[CADENCE_OFFSET];
     currentSpeed = rxBuffer[SPEED_OFFSET];
     pulse = rxBuffer[PULSE_OFFSET];
-    gear = rxBuffer[PULSE_OFFSET];
-    time = rxBuffer[PULSE_OFFSET];
-    pedalOnOff = rxBuffer[PULSE_OFFSET];
-    distanceTraveled = rxBuffer[DISTANCE_OFFSET] + (rxBuffer[DISTANCE_OFFSET] << 8);
-    elapsedTime = rxBuffer[TIME_OFFSET] + (rxBuffer[TIME_OFFSET+1] << 8);
+    gear = rxBuffer[GEAR_OFFSET];
+    pedalOnOff = rxBuffer[PEDAL_ON_OFF_OFFSET];
+    feStateBits = pedalOnOff ? FE_STATE_IN_USE : FE_STATE_READY;
+    distanceTraveled = rxBuffer[DISTANCE_OFFSET] + (rxBuffer[DISTANCE_OFFSET + 1] << 8);
+    elapsedTime = rxBuffer[TIME_OFFSET] + (rxBuffer[TIME_OFFSET + 1] << 8);
     dataMutex.unlock();
+
     serialMutex.unlock();
 }
 
