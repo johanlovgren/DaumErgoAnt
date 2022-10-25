@@ -16,6 +16,8 @@ public:
     void SetPower(unsigned short power);
     void SetCadence(unsigned short cadence);
     void SetSpeed(unsigned short speed);
+    void SetEquipmentType(uint8_t equipmentType);
+
 
     bool Init(const char *string) override;
 
@@ -25,27 +27,13 @@ public:
 
     bool RunWorkout(std::vector<std::tuple<int, int>> workout) override;
 
-    uint8_t GetEquipmentType() override;
-
-    uint16_t GetElapsedTime() override;
-
-    uint16_t GetDistanceTraveled() override;
-
-    uint8_t GetHeartRate() override;
-
-    uint8_t GetCapabilitiesState() override;
-
     uint8_t GetCycleLength() override;
 
     uint8_t GetResistanceLevel() override;
 
     uint16_t GetIncline() override;
-
-    uint8_t GetFEStateBits() override;
-
-    uint8_t GetTargetPowerFlag() override;
-
-    uint8_t GetTrainerStatusBitField() override;
+private:
+    void DataUpdater();
 };
 
 

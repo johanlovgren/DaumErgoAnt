@@ -3,21 +3,24 @@
 //
 
 #include "AntFECProfile.h"
+#include <iostream>
 
 
 #define MASTER 0x10
 #define RF_CHANNEL_FREQUENCY 57
 #define DEVICE_TYPE 0x11
-#define TRANSMISSION_TYPE_MSN 0
-#define TRANSMISSION_TYPE_LSN 5
-#define DEVICE_NUMBER 666
+#define TRANS_TYPE 5
+#define DEVICE_NUMBER 51
 #define CHANNEL_PERIOD 8192
 #define PAIRING 0
 
-#define GENERAL_MAIN_DATA_PAGES_INTERVAL 5
-#define FE_SPECIFIC_DATA_PAGES_INTERVAL 5
-#define BACKGROUND_DATA_PAGE_80_INTERVAL 66 // Send 2!
-#define BACKGROUND_DATA_PAGE_81_INTERVAL 132 // Send 2!
+// Transmit pattern constants
+#define TRANSMIT_PATTERN_BLOCK_1 64
+#define TRANSMIT_PATTERN_BLOCK_2 66
+#define TRANSMIT_PATTERN_BLOCK_3 130
+#define TRANSMIT_PATTERN_BLOCK_4 132
+#define TRANSMIT_PATTERN_B_BLOCK_1 2
+#define TRANSMIT_PATTERN_B_BLOCK_2 4
 
 // Data Page 16 - General FE Data
 #define DATA_PAGE_16_DATA_PAGE_NUMBER_INDEX 0
@@ -111,6 +114,8 @@
 // Required Common Pages
 // Common Page 80 - Manufacturer's Identification
 #define COMMON_DATA_PAGE_80_DATA_PAGE_NUMBER_INDEX 0
+#define COMMON_DATA_PAGE_80_RESERVED_INDEX1 1
+#define COMMON_DATA_PAGE_80_RESERVED_INDEX2 2
 #define COMMON_DATA_PAGE_80_HW_REVISION_INDEX 3
 #define COMMON_DATA_PAGE_80_MANUFACTURER_ID_LSB_INDEX 4
 #define COMMON_DATA_PAGE_80_MANUFACTURER_ID_MSB_INDEX 5
@@ -118,7 +123,9 @@
 #define COMMON_DATA_PAGE_80_MODEL_NUMBER_MSB_INDEX 7
 
 #define COMMON_DATA_PAGE_81_DATA_PAGE_NUMBER_INDEX 0
-#define COMMON_DATA_PAGE_81_SW_REVISION_INDEX 1
+#define COMMON_DATA_PAGE_81_RESERVED_INDEX 1
+#define COMMON_DATA_PAGE_81_SW_REVISION_INDEX 2
+#define COMMON_DATA_PAGE_81_SW_REVISION_MAIN_INDEX 3
 #define COMMON_DATA_PAGE_81_SERIAL_NUMBER_0_7_INDEX 4
 #define COMMON_DATA_PAGE_81_SERIAL_NUMBER_8_15_INDEX 5
 #define COMMON_DATA_PAGE_81_SERIAL_NUMBER_16_23_INDEX 6
@@ -133,52 +140,110 @@
 #define TRANSMIT_PATTERN_REPEATING_DATA_PAGES 64
 #define TRANSMIT_PATTERN_COMMON_PAGES 2
 
-AntFECProfile::AntFECProfile(DaumErgo *ergo, DSIFramerANT *antMessageObject, uint8_t channelNumber) {
+void DataPage16(uint8_t *buf, DaumErgo *ergo);
+void DataPage17(uint8_t *buf, DaumErgo *ergo);
+void DataPage25(uint8_t *buf, DaumErgo *ergo);
+void DataPage26(uint8_t *buf);
+void DataPage48(uint8_t *buf);
+void DataPage49(uint8_t *buf);
+void DataPage50(uint8_t *buf);
+void DataPage51(uint8_t *buf);
+void DataPage54(uint8_t *buf);
+void DataPage55(uint8_t *buf);
+void DataPage71(uint8_t *buf);
+void DataPage80(uint8_t *buf);
+void DataPage81(uint8_t *buf);
+
+AntFECProfile::AntFECProfile(DaumErgo *ergo) {
     this->ergo = ergo;
-    this->antMessageObject = antMessageObject;
-    this->channelNumber = channelNumber;
-    transmitPatternCounter = transmitCommonPageCounter = eventCounter = accumulatedPower = 0;
-    memset(txBuffer, 0, ANT_STANDARD_DATA_PAYLOAD_SIZE);
+    this->deviceType = DEVICE_TYPE; // TODO Fix this!
+    this->channelPeriod = CHANNEL_PERIOD;
+    this->transType = TRANS_TYPE;
+    this->channelType = PARAMETER_TX_NOT_RX;
+    this->deviceNum = DEVICE_NUMBER;
+
+    transmitPatternCounter = transmitPatternBCounter = eventCounter = accumulatedPower = 0;
 }
 
 AntFECProfile::~AntFECProfile() {
     this->ergo = nullptr;
-    this->antMessageObject = nullptr;
 }
 
 void AntFECProfile::HandleTXEvent(uint8_t *txBuffer) {
-    TransmitPatternA(txBuffer);
-    antMessageObject->SendBroadcastData(channelNumber, txBuffer);
+    // TODO Implement this!
+    TransmitPatternB(txBuffer);
 }
 
 void AntFECProfile::TransmitPatternA(uint8_t *buf) {
-    if (transmitPatternCounter++ < TRANSMIT_PATTERN_REPEATING_DATA_PAGES) {
-        DataPage16(buf);
-    } else if (transmitCommonPageCounter < TRANSMIT_PATTERN_COMMON_PAGES) {
+    ++transmitPatternCounter;
+    if (transmitPatternCounter < TRANSMIT_PATTERN_BLOCK_1 ||
+        (transmitPatternCounter >= TRANSMIT_PATTERN_BLOCK_2 &&
+         transmitPatternCounter < TRANSMIT_PATTERN_BLOCK_3)) {
+        DataPage16(buf, ergo);
+    } else if (transmitPatternCounter >= TRANSMIT_PATTERN_BLOCK_1 &&
+               transmitPatternCounter < TRANSMIT_PATTERN_BLOCK_2) {
         DataPage80(buf);
-        transmitCommonPageCounter++;
-        transmitPatternCounter = transmitCommonPageCounter == 2 ? 0 : transmitPatternCounter;
-    } else if (transmitCommonPageCounter < TRANSMIT_PATTERN_COMMON_PAGES * 2) {
+    } else if (transmitPatternCounter >= TRANSMIT_PATTERN_BLOCK_3 &&
+               transmitPatternCounter < TRANSMIT_PATTERN_BLOCK_4) {
         DataPage81(buf);
-        transmitCommonPageCounter = ++transmitCommonPageCounter % 4;
-        transmitPatternCounter = transmitCommonPageCounter == 2 ? 0 : transmitPatternCounter;
+    } else {
+        transmitPatternCounter = 0;
+        DataPage16(buf, ergo);
     }
 }
 
-void AntFECProfile::DataPage16(uint8_t *buf) {
-    unsigned short speed = ergo->GetSpeed();
+void AntFECProfile::TransmitPatternB(uint8_t *buf) {
+    ++transmitPatternCounter;
+    if (transmitPatternCounter < TRANSMIT_PATTERN_BLOCK_1 ||
+        (transmitPatternCounter >= TRANSMIT_PATTERN_BLOCK_2 &&
+         transmitPatternCounter < TRANSMIT_PATTERN_BLOCK_3)) {
+        ++transmitPatternBCounter;
+        if (transmitPatternBCounter >= 0 &&
+            transmitPatternBCounter < TRANSMIT_PATTERN_B_BLOCK_1) {
+            DataPage16(buf, ergo);
+        } else if (transmitPatternBCounter >= TRANSMIT_PATTERN_B_BLOCK_1 &&
+                   transmitPatternBCounter < TRANSMIT_PATTERN_B_BLOCK_2) {
+            DataPage25(buf, ergo);
+        } else {
+            transmitPatternBCounter = 0;
+            DataPage16(buf, ergo);
+        }
+    } else if (transmitPatternCounter >= TRANSMIT_PATTERN_BLOCK_1 &&
+               transmitPatternCounter < TRANSMIT_PATTERN_BLOCK_2) {
+        DataPage80(buf);
+    } else if (transmitPatternCounter >= TRANSMIT_PATTERN_BLOCK_3 &&
+               transmitPatternCounter < TRANSMIT_PATTERN_BLOCK_4) {
+        DataPage81(buf);
+    } else {
+        transmitPatternCounter = 0;
+        DataPage16(buf, ergo);
+    }
+}
+
+/**
+ * General FE Data
+ * @param buf
+ */
+void DataPage16(uint8_t *buf, DaumErgo *ergo) {
+    // Converting speed to unit of 0.001 m/s
+    uint16_t speed = (ergo->GetSpeed() / 3.6) * 1000;
+
     buf[DATA_PAGE_16_DATA_PAGE_NUMBER_INDEX] = 16;
     buf[DATA_PAGE_16_EQUIPMENT_TYPE_INDEX] = ergo->GetEquipmentType();
     // Elapsed time have 0.25s as unit and is an accumulated value
-    buf[DATA_PAGE_16_ELAPSED_TIME_INDEX] = (ergo->GetElapsedTime() % DATA_PAGE_16_ELAPSED_TIME_ROLLOVER) * 4;
+    buf[DATA_PAGE_16_ELAPSED_TIME_INDEX] = (ergo->GetElapsedTime() * 4) % DATA_PAGE_16_ELAPSED_TIME_ROLLOVER;
     // Distance traveled have meter unit and is an accumulated value
     buf[DATA_PAGE_16_DISTANCE_TRAVELED_INDEX] = ergo->GetDistanceTraveled() % DATA_PAGE_16_DISTANCE_TRAVELED_ROLLOVER;
     buf[DATA_PAGE_16_SPEED_LSB_INDEX] = (uint8_t) speed;
     buf[DATA_PAGE_16_SPEED_MSB_INDEX] = (uint8_t) (speed >> 8);
     buf[DATA_PAGE_16_HEART_RATE_INDEX] = ergo->GetHeartRate();
-    buf[DATA_PAGE_16_CAPABILITIES_FE_STATE_INDEX] = ergo->GetCapabilitiesState();
+    buf[DATA_PAGE_16_CAPABILITIES_FE_STATE_INDEX] = ergo->GetCapabilitiesFeState();
 }
-void AntFECProfile::DataPage17(uint8_t *buf) {
+/**
+ * General Settings Page
+ * @param buf
+ */
+void DataPage17(uint8_t *buf, DaumErgo *ergo) {
     uint16_t incline = ergo->GetIncline();
     buf[DATA_PAGE_17_PAGE_NUMBER_INDEX] = 17;
     buf[DATA_PAGE_17_CYCLE_LENGTH_INDEX] = ergo->GetCycleLength();
@@ -186,16 +251,22 @@ void AntFECProfile::DataPage17(uint8_t *buf) {
     buf[DATA_PAGE_17_INCLINE_MSB_INDEX] = (uint8_t) (incline >> 8);
     buf[DATA_PAGE_17_RESISTANCE_LEVEL_INDEX] = ergo->GetResistanceLevel();
     // First 4 bits are reserved for future use
-    buf[DATA_PAGE_17_CAPABILITIES_FE_STATE_INDEX] = ergo->GetCapabilitiesState() & 0xF0;
+    buf[DATA_PAGE_17_CAPABILITIES_FE_STATE_INDEX] = ergo->GetCapabilitiesFeState() & 0xF0;
 }
-
-void AntFECProfile::DataPage25(uint8_t *buf) {
+/**
+ * Specific Trainer/Stationary Bike Data
+ * @param buf
+ */
+void DataPage25(uint8_t *buf, DaumErgo *ergo) {
     uint16_t power = ergo->GetPower();
-    uint8_t trainerStatus = ergo->GetTrainerStatusBitField();
+    uint16_t accumulatedPower = ergo->GetAccumulatedPower();
+    uint8_t eventCounter = ergo->GetPowerEventCounter();
+    uint8_t trainerStatus = ergo->GetTrainerPowerStatusBitField();
     uint8_t trainerTargetPowerFlag = ergo->GetTargetPowerFlag();
     uint8_t trainerFEBits = ergo->GetFEStateBits();
+
     buf[DATA_PAGE_25_DATA_PAGE_NUMBER_INDEX] = 25;
-    buf[DATA_PAGE_25_UPDATE_EVENT_COUNT_INDEX] = ++eventCounter;
+    buf[DATA_PAGE_25_UPDATE_EVENT_COUNT_INDEX] = ergo->GetPowerEventCounter();
     buf[DATA_PAGE_25_INSTANTANEOUS_CADENCE_INDEX] = ergo->GetCadence();
     buf[DATA_PAGE_25_ACCUMULATED_POWER_LSB_INDEX] = (uint8_t) accumulatedPower;
     buf[DATA_PAGE_25_ACCUMULATED_POWER_MSB_INDEX] = (uint8_t) (accumulatedPower >> 8);
@@ -203,33 +274,96 @@ void AntFECProfile::DataPage25(uint8_t *buf) {
     buf[DATA_PAGE_25_INSTANTANEOUS_POWER_MSB_BIT_STATUS_INDEX] = (power >> 8) + (trainerStatus << 4);
     buf[DATA_PAGE_25_FLAG_FE_STATE_INDEX] = trainerTargetPowerFlag + (trainerFEBits << 4);
 }
-
-void AntFECProfile::DataPage26(uint8_t *buf) {
+/**
+ * Specific Tariner Torque Data (optional)
+ * @param buf
+ */
+void DataPage26(uint8_t *buf) {
+    // If not implemented, set to invalid as stated in Table 8-29 in doc
+    buf[DATA_PAGE_26_DATA_PAGE_NUMBER_INDEX] = 26;
+    // TODO Fix counter increment with each information update
+    buf[DATA_PAGE_26_UPDATE_EVENT_COUNT_INDEX] = 0;
+    buf[DATA_PAGE_26_WHEEL_TICKS_INDEX] = 0;
+    buf[DATA_PAGE_26_WHEEL_PERIOD_LSB_INDEX] = 0;
+    buf[DATA_PAGE_26_WHEEL_PERIOD_MSB_INDEX] = 0;
+    buf[DATA_PAGE_26_ACCUMULATED_TORQUE_LSB_INDEX] = 0;
+    buf[DATA_PAGE_26_ACCUMULATED_TORQUE_MSB_INDEX] = 0;
+    buf[DATA_PAGE_26_CAPABILITIES_FE_STATE_INDEX] = 0;
 }
 
-void AntFECProfile::DataPage48(uint8_t *buf) {
+
+void fill_unused_indexes(int start, int end, uint8_t* buf) {
+    for (int i = start; i <= end; ++i) {
+        buf[i] = 0xFF;
+    }
+}
+// Page 48 - 51 are transmitted as acknowledge message from the controller to the FEC
+/**
+ * Basic Resistance,
+ * @param buf
+ */
+void DataPage48(uint8_t *buf, DaumErgo *ergo) {
+    fill_unused_indexes(1, 6, buf);
+    buf[DATA_PAGE_48_DATA_PAGE_NUMBER_INDEX] = 48;
+    buf[DATA_PAGE_48_TOTAL_RESISTANCE_INDEX] = ergo->GetResistanceLevel();
 }
 
-void AntFECProfile::DataPage49(uint8_t *buf) {
+/**
+ * Target Power
+ * @param buf
+ */
+void DataPage49(uint8_t *buf, DaumErgo *ergo) {
+    fill_unused_indexes(1, 5, buf);
+    unsigned short power = ergo->GetPower();
+    buf[DATA_PAGE_49_DATA_PAGE_NUMBER_INDEX] = 49;
+    buf[DATA_PAGE_49_TARGET_POWER_LSB_INDEX] = (uint8_t) power;
+    buf[DATA_PAGE_49_TARGET_POWER_MSB_INDEX] = (uint8_t) power >> 8;
 }
 
-void AntFECProfile::DataPage50(uint8_t *buf) {
+/**
+ * Wind resistance
+ * @param buf
+ */
+void DataPage50(uint8_t *buf) {
 }
 
-void AntFECProfile::DataPage51(uint8_t *buf) {
+/**
+ * Track Resistance
+ * @param buf
+ */
+void DataPage51(uint8_t *buf) {
 }
 
-void AntFECProfile::DataPage54(uint8_t *buf) {
+void DataPage54(uint8_t *buf) {
 }
 
-void AntFECProfile::DataPage55(uint8_t *buf) {
+void DataPage55(uint8_t *buf) {
 }
 
-void AntFECProfile::DataPage71(uint8_t *buf) {
+void DataPage71(uint8_t *buf) {
 }
-void AntFECProfile::DataPage80(uint8_t *buf) {
+
+
+void DataPage80(uint8_t *buf) {
+    buf[COMMON_DATA_PAGE_80_DATA_PAGE_NUMBER_INDEX] = 80;
+    buf[COMMON_DATA_PAGE_80_RESERVED_INDEX1] = 0xFF;
+    buf[COMMON_DATA_PAGE_80_RESERVED_INDEX2] = 0xFF;
+    buf[COMMON_DATA_PAGE_80_HW_REVISION_INDEX] = 0x0A;
+    buf[COMMON_DATA_PAGE_80_MANUFACTURER_ID_LSB_INDEX] = 0xFF;
+    buf[COMMON_DATA_PAGE_80_MANUFACTURER_ID_MSB_INDEX] = 0;
+    buf[COMMON_DATA_PAGE_80_MODEL_NUMBER_LSB_INDEX] = 0xAD;
+    buf[COMMON_DATA_PAGE_80_MODEL_NUMBER_MSB_INDEX] = 0xDE;
 }
-void AntFECProfile::DataPage81(uint8_t *buf) {
+
+void DataPage81(uint8_t *buf) {
+    buf[COMMON_DATA_PAGE_81_DATA_PAGE_NUMBER_INDEX] = 81;
+    buf[COMMON_DATA_PAGE_81_RESERVED_INDEX] = 0xFF;
+    buf[COMMON_DATA_PAGE_81_SW_REVISION_INDEX] = 0xFF;
+    buf[COMMON_DATA_PAGE_81_SW_REVISION_MAIN_INDEX] = 0x01;
+    buf[COMMON_DATA_PAGE_81_SERIAL_NUMBER_0_7_INDEX] = 0xFF;
+    buf[COMMON_DATA_PAGE_81_SERIAL_NUMBER_8_15_INDEX] = 0xFF;
+    buf[COMMON_DATA_PAGE_81_SERIAL_NUMBER_16_23_INDEX] = 0xFF;
+    buf[COMMON_DATA_PAGE_81_SERIAL_NUMBER_24_31_INDEX] = 0xFF;
 }
 
 
