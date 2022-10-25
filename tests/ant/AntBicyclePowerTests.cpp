@@ -14,7 +14,7 @@ TEST (ANTBikePower, Constants) {
     AntBikePower antPower = AntBikePower(nullptr);
     ASSERT_EQ(antPower.GetDeviceType(), 11);
     ASSERT_EQ(antPower.GetChannelPeriod(), 8182);
-    ASSERT_EQ(antPower.GetTransType(), 1);
+    ASSERT_EQ(antPower.GetTransType(), 5);
     ASSERT_EQ(antPower.GetChannelType(), PARAMETER_TX_NOT_RX);
     ASSERT_EQ(antPower.GetDeviceNum(), 49);
 }
@@ -50,4 +50,5 @@ TEST(ANTBikePower, FixedPower) {
         ASSERT_EQ(power2, fixedPower);
         ASSERT_EQ(updateEventCount2, (i+1) % BYTE_MAX);
     }
+    testErgo->Close();
 }

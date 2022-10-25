@@ -54,4 +54,5 @@ TEST(ANTBikeSpeedCadence, FixedSpeedCadence) {
         ASSERT_EQ(fixedCadence, currentCadence);
         ASSERT_EQ(fixedSpeed, currentSpeed);
     }
+    testErgo->Close();
 }
