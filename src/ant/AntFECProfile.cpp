@@ -227,6 +227,8 @@ void AntFECProfile::TransmitPatternB(uint8_t *buf) {
 void DataPage16(uint8_t *buf, DaumErgo *ergo) {
     // Converting speed to unit of 0.001 m/s
     uint16_t speed = (ergo->GetSpeed() / 3.6) * 1000;
+    uint8_t capabilitiesBits = ergo->GetCapabilitiesBits();
+    uint8_t feState = ergo->GetFEStateBits();
 
     buf[DATA_PAGE_16_DATA_PAGE_NUMBER_INDEX] = 16;
     buf[DATA_PAGE_16_EQUIPMENT_TYPE_INDEX] = ergo->GetEquipmentType();
@@ -237,7 +239,7 @@ void DataPage16(uint8_t *buf, DaumErgo *ergo) {
     buf[DATA_PAGE_16_SPEED_LSB_INDEX] = (uint8_t) speed;
     buf[DATA_PAGE_16_SPEED_MSB_INDEX] = (uint8_t) (speed >> 8);
     buf[DATA_PAGE_16_HEART_RATE_INDEX] = ergo->GetHeartRate();
-    buf[DATA_PAGE_16_CAPABILITIES_FE_STATE_INDEX] = ergo->GetCapabilitiesFeState();
+    buf[DATA_PAGE_16_CAPABILITIES_FE_STATE_INDEX] = capabilitiesBits + (feState << 4);
 }
 /**
  * General Settings Page
@@ -251,7 +253,7 @@ void DataPage17(uint8_t *buf, DaumErgo *ergo) {
     buf[DATA_PAGE_17_INCLINE_MSB_INDEX] = (uint8_t) (incline >> 8);
     buf[DATA_PAGE_17_RESISTANCE_LEVEL_INDEX] = ergo->GetResistanceLevel();
     // First 4 bits are reserved for future use
-    buf[DATA_PAGE_17_CAPABILITIES_FE_STATE_INDEX] = ergo->GetCapabilitiesFeState() & 0xF0;
+    buf[DATA_PAGE_17_CAPABILITIES_FE_STATE_INDEX] = ergo->GetCapabilitiesBits() & 0xF0;
 }
 /**
  * Specific Trainer/Stationary Bike Data
@@ -260,7 +262,6 @@ void DataPage17(uint8_t *buf, DaumErgo *ergo) {
 void DataPage25(uint8_t *buf, DaumErgo *ergo) {
     uint16_t power = ergo->GetPower();
     uint16_t accumulatedPower = ergo->GetAccumulatedPower();
-    uint8_t eventCounter = ergo->GetPowerEventCounter();
     uint8_t trainerStatus = ergo->GetTrainerPowerStatusBitField();
     uint8_t trainerTargetPowerFlag = ergo->GetTargetPowerFlag();
     uint8_t trainerFEBits = ergo->GetFEStateBits();
@@ -275,7 +276,7 @@ void DataPage25(uint8_t *buf, DaumErgo *ergo) {
     buf[DATA_PAGE_25_FLAG_FE_STATE_INDEX] = trainerTargetPowerFlag + (trainerFEBits << 4);
 }
 /**
- * Specific Tariner Torque Data (optional)
+ * Specific Triner Torque Data (optional)
  * @param buf
  */
 void DataPage26(uint8_t *buf) {
