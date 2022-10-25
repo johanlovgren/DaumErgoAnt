@@ -6,7 +6,7 @@
 #include "../../include/antdefines.h"
 
 #define CHANNEL_PERIOD ((unsigned short) 8182)
-#define TRANS_TYPE ((unsigned char) 1)
+#define TRANS_TYPE ((unsigned char) 5)
 #define DEVICE_NUM ((unsigned short) 49)
 #define DEVICE_TYPE ((unsigned char) 11)
 
