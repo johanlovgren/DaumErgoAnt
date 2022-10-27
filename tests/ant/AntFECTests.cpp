@@ -33,30 +33,30 @@ TEST (ANTFECProfile, TransmitPatternB) {
         if (transmitCounter >= 0 && transmitCounter < 64) {
             transmitCounterB++;
             if (transmitCounterB >= 0 && transmitCounterB < 2) {
-                ASSERT_EQ(buf[DATA_PAGE_16_DATA_PAGE_NUMBER_INDEX], 16);
+                ASSERT_EQ(buf[DP_NUMBER_INDEX], 16);
             } else if (transmitCounterB >= 2 && transmitCounterB < 4) {
-                ASSERT_EQ(buf[DATA_PAGE_16_DATA_PAGE_NUMBER_INDEX], 25);
+                ASSERT_EQ(buf[DP_NUMBER_INDEX], 25);
             } else {
-                ASSERT_EQ(buf[DATA_PAGE_16_DATA_PAGE_NUMBER_INDEX], 16);
+                ASSERT_EQ(buf[DP_NUMBER_INDEX], 16);
                 transmitCounterB = 0;
             }
         } else if (transmitCounter >= 64 && transmitCounter < 66) {
-            ASSERT_EQ(buf[DATA_PAGE_16_DATA_PAGE_NUMBER_INDEX], 80);
+            ASSERT_EQ(buf[DP_NUMBER_INDEX], 80);
         } else if (transmitCounter >= 66 && transmitCounter < 130) {
             transmitCounterB++;
             if (transmitCounterB >= 0 && transmitCounterB < 2) {
-                ASSERT_EQ(buf[DATA_PAGE_16_DATA_PAGE_NUMBER_INDEX], 16);
+                ASSERT_EQ(buf[DP_NUMBER_INDEX], 16);
             } else if (transmitCounterB >= 2 && transmitCounterB < 4) {
-                ASSERT_EQ(buf[DATA_PAGE_16_DATA_PAGE_NUMBER_INDEX], 25);
+                ASSERT_EQ(buf[DP_NUMBER_INDEX], 25);
             } else {
-                ASSERT_EQ(buf[DATA_PAGE_16_DATA_PAGE_NUMBER_INDEX], 16);
+                ASSERT_EQ(buf[DP_NUMBER_INDEX], 16);
                 transmitCounterB = 0;
             }
         } else if (transmitCounter >= 130 && transmitCounter < 132) {
-            ASSERT_EQ(buf[DATA_PAGE_16_DATA_PAGE_NUMBER_INDEX], 81);
+            ASSERT_EQ(buf[DP_NUMBER_INDEX], 81);
         } else {
             transmitCounter = 0;
-            ASSERT_EQ(buf[DATA_PAGE_16_DATA_PAGE_NUMBER_INDEX], 16);
+            ASSERT_EQ(buf[DP_NUMBER_INDEX], 16);
         }
     }
     testErgo->Close();
@@ -75,16 +75,16 @@ TEST (ANTFECProfile, TransmitPatternA) {
         antFEC.TransmitPatternA(buf);
         transmitCounter++;
         if (transmitCounter >= 0 && transmitCounter < 64) {
-            ASSERT_EQ(buf[DATA_PAGE_16_DATA_PAGE_NUMBER_INDEX], 16);
+            ASSERT_EQ(buf[DP_NUMBER_INDEX], 16);
         } else if (transmitCounter >= 64 && transmitCounter < 66) {
-            ASSERT_EQ(buf[DATA_PAGE_16_DATA_PAGE_NUMBER_INDEX], 80);
+            ASSERT_EQ(buf[DP_NUMBER_INDEX], 80);
         } else if (transmitCounter >= 66 && transmitCounter < 130) {
-            ASSERT_EQ(buf[DATA_PAGE_16_DATA_PAGE_NUMBER_INDEX], 16);
+            ASSERT_EQ(buf[DP_NUMBER_INDEX], 16);
         } else if (transmitCounter >= 130 && transmitCounter < 132) {
-            ASSERT_EQ(buf[DATA_PAGE_16_DATA_PAGE_NUMBER_INDEX], 81);
+            ASSERT_EQ(buf[DP_NUMBER_INDEX], 81);
         } else {
             transmitCounter = 0;
-            ASSERT_EQ(buf[DATA_PAGE_16_DATA_PAGE_NUMBER_INDEX], 16);
+            ASSERT_EQ(buf[DP_NUMBER_INDEX], 16);
         }
     }
     testErgo->Close();

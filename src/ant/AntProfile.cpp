@@ -3,30 +3,28 @@
 //
 #include "AntProfile.h"
 
-AntProfile::AntProfile() {
-    channelNumber = -1;
-}
+AntProfile::AntProfile() { }
 
 void AntProfile::SetChannelNumber(uint8_t number) {
     channelNumber = number;
 }
 
-unsigned char AntProfile::GetDeviceType() const {
+uint8_t AntProfile::GetDeviceType() const {
     return deviceType;
 }
 
-unsigned short AntProfile::GetChannelPeriod() const {
+uint16_t AntProfile::GetChannelPeriod() const {
     return channelPeriod;
 }
 
-unsigned char AntProfile::GetTransType() const {
+uint8_t AntProfile::GetTransType() const {
     return transType;
 }
 
-unsigned char AntProfile::GetChannelType() const {
+uint8_t AntProfile::GetChannelType() const {
     return channelType;
 }
 
-unsigned char AntProfile::GetDeviceNum() const {
+uint8_t AntProfile::GetDeviceNum() const {
     return deviceNum;
 }

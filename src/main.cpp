@@ -6,8 +6,10 @@
 #include "DaumErgoPremium8i.h"
 #include "DaumErgo8008TRS.h"
 #include "AntService.h"
+
 #include "AntBikeSpeedCadence.h"
 #include "AntBikePower.h"
+#include "AntFECProfile.h"
 #include "TestErgo.h"
 
 using namespace std;
@@ -108,14 +110,9 @@ int run() {
     }
 
     auto *antService = new AntService(verbose);
-    auto *antBikePower = new AntBikePower(ergo);
-    if (!antService->AddAntProfile(antBikePower)) {
+    auto *antFec = new AntFECProfile(ergo);
+    if (!antService->AddAntProfile(antFec)) {
         ergo->Close();
-    }
-    auto *antBikeSpeedCadence = new AntBikeSpeedCadence(ergo);
-    if (!antService->AddAntProfile(antBikeSpeedCadence)) {
-        ergo->Close();
-        return 1;
     }
 
     if (!antService->Init(antDeviceNr)) {

@@ -3,10 +3,15 @@
 //
 
 #include <vector>
+#include <cmath>
 #include "TestErgo.h"
 
+#define MAXIMUM_WATT 800
+#define MINIMUM_WATT 25
+
 TestErgo::TestErgo() {
-    this->capabilitiesFeState = 0 + (3 << 4);
+    this->hrDistanceSpeedCapabilitiesBits = 0;
+    this->feStateBits = 3;
     this->equipmentType = 25;
     this->distanceTraveled = 0;
     this->heartRate = 0;
@@ -14,6 +19,8 @@ TestErgo::TestErgo() {
     this->trainerPowerStatusBitField = 0;
     this->feStateBits = 3; // InUse
     this->targetPowerFlag = 0; // Operating at target power
+    // Training mode capabilities: Bit 0 Basic resistance, bit 1 target power, bit 2 sim mode, bit 3-7 set 0
+    trainingModCapabilities = 0 + (1 << 1);
 }
 
 
@@ -25,8 +32,15 @@ void TestErgo::Close() {
     done = true;
 }
 
-void TestErgo::SetPower(unsigned short power) {
+void TestErgo::SetPower(uint16_t power) {
+    power = (uint16_t) round(power / 5) * 5;
     this->currentPower = power;
+}
+
+void TestErgo::SetResistance(uint8_t resistance) {
+    targetResistance = resistance;
+    uint16_t power = MAXIMUM_WATT * ((double) resistance / 100);
+    SetPower(power);
 }
 
 void TestErgo::SetCadence(unsigned short cadence) {

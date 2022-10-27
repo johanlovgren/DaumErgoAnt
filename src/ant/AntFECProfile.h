@@ -18,15 +18,25 @@ class AntFECProfile: public AntProfile {
 public:
     explicit AntFECProfile(DaumErgo *ergo);
     ~AntFECProfile();
+    /**
+      * Handles an ANT+ TX Event
+      * @param txBuffer Data that will be sent as broadcast data. Buffer will be filled by this method.
+      */
     void HandleTXEvent(uint8_t *txBuffer) override;
-
+    /**
+      * Handles a Acknowledged Event that was received from slave.
+      * @param rxBuf Data received from slave
+      * @param txBuf Data that will be returned to slave. Will be filled by method.
+      * @return How many times the response is requested to be returned to slave if request was handled successful.
+      * If no response shall be sent, 0xFF will be returned.
+      */
+    uint8_t HandleAckEvent(uint8_t *txBuffer, uint8_t *txBuf) override;
 private:
     int transmitPatternCounter, transmitPatternBCounter;
-    uint8_t eventCounter;
-    uint16_t accumulatedPower;
+    uint8_t latestReceivedCommandID, latestSlaveSequenceNumber, latestCommandStatus;
 
-    void TransmitPatternA(uint8_t *buf);
-    void TransmitPatternB(uint8_t *buf);
+    void TransmitPatternA(uint8_t *txBuf);
+    void TransmitPatternB(uint8_t *txBuf);
 
     FRIEND_TEST(ANTFECProfile, TransmitPatternA);
     FRIEND_TEST(ANTFECProfile, TransmitPatternB);

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <utility>
 #include <vector>
+#include <cmath>
 #include "DaumErgo8008TRS.h"
 
 
@@ -54,7 +55,7 @@ DaumErgo8008TRS::DaumErgo8008TRS(bool verbose) {
     this->verbose = verbose;
     ergoAddress = -1;
     equipmentType = ANT_EQUIPMENT_TYPE;
-    capabilitiesBits = 0;
+    hrDistanceSpeedCapabilitiesBits = 0;
     updatePowerEventCount = 0;
     feStateBits = 2; // Set to READY
     trainerPowerStatusBitField = 0; // Calibration complete/not required
@@ -64,6 +65,8 @@ DaumErgo8008TRS::DaumErgo8008TRS(bool verbose) {
     currentSpeed = 0;
     accumulatedPower = 0;
     heartRate = 0xFF; // Invalid
+    // Training mode capabilities: Bit 0 Basic resistance, bit 1 target power, bit 2 sim mode, bit 3-7 set 0
+    trainingModCapabilities = 1 + (1 << 1);
 }
 
 DaumErgo8008TRS::~DaumErgo8008TRS() {
@@ -150,6 +153,22 @@ uint16_t DaumErgo8008TRS::GetIncline() {
     return 0x7FFF;
 }
 
+void DaumErgo8008TRS::SetPower(uint16_t power) {
+    targetPower = power;
+    power = (uint16_t) (round(power / 5) * 5);
+    if (power > MAXIMUM_WATT)
+        SetWatt(MAXIMUM_WATT);
+    else
+        SetWatt(power);
+}
+
+void DaumErgo8008TRS::SetResistance(uint8_t resistance) {
+    resistance = resistance >= 100 ? 100 : resistance;
+    targetResistance = resistance;
+    uint16_t power = MAXIMUM_WATT * ((double) resistance / 100);
+    SetPower(power);
+}
+
 // ----------------------- Private  -------------------------------
 
 void DaumErgo8008TRS::SetTime(uint8_t seconds, uint8_t minutes, uint8_t hours) {
@@ -216,9 +235,9 @@ void DaumErgo8008TRS::UpdateTrainingData() {
     ++updatePowerEventCount;
     currentProgramme = rxBuffer[PROGRAMME_OFFSET];
     currentUser = rxBuffer[USER_OFFSET];
-    currentPower = rxBuffer[POWER_OFFSET] * 5;
-    accumulatedPower += currentPower;
     currentCadence = rxBuffer[CADENCE_OFFSET];
+    currentPower = currentCadence ? rxBuffer[POWER_OFFSET] * 5 : 0;
+    accumulatedPower += currentPower;
     currentSpeed = rxBuffer[SPEED_OFFSET];
     pulse = rxBuffer[PULSE_OFFSET];
     gear = rxBuffer[GEAR_OFFSET];

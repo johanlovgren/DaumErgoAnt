@@ -22,6 +22,10 @@ AntBikePower::AntBikePower(DaumErgo *ergo) {
     this->cumulativePower = 0;
 }
 
+/**
+ * Handles an ANT+ TX Event
+ * @param txBuffer Data that will be sent as broadcast data. Buffer will be filled by this method.
+ */
 void AntBikePower::HandleTXEvent(unsigned char *txBuffer) {
     unsigned short power = ergo->GetPower();
     cumulativePower += power;
@@ -34,6 +38,14 @@ void AntBikePower::HandleTXEvent(unsigned char *txBuffer) {
     txBuffer[MESSAGE_BUFFER_DATA6_INDEX] = (cumulativePower >> 8) & 0xFF; // Accumulated power MSB
     txBuffer[MESSAGE_BUFFER_DATA7_INDEX] = power; // Power LSB
     txBuffer[MESSAGE_BUFFER_DATA8_INDEX] = power >> 8; // Power MSB
+}
 
-    //pclMessageObject->SendBroadcastData(POWER_ANTCHANNEL, txBuffer);
+/**
+ * Acknowledged events is not implemented for this ANT+ profile
+ * @param rxBuf _
+ * @param txBuf _
+ * @return NOT_SUPPORTED (0xFF)
+ */
+uint8_t AntBikePower::HandleAckEvent(uint8_t *rxBuf, uint8_t *txBuf) {
+    return NOT_SUPPORTED;
 }

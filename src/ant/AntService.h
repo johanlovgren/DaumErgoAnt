@@ -31,7 +31,7 @@ public:
      * @param ergo the ergo which to transmit data from
      * @param verbose output if true
      */
-    AntService(bool verbose);
+    explicit AntService(bool verbose);
     virtual ~AntService();
 
     bool AddAntProfile(AntProfile* antProfile);
@@ -56,6 +56,7 @@ private:
     void MessageThread();
     void ProcessMessage(ANT_MESSAGE stMessage);
     void ProcessResponseEvent(ANT_MESSAGE stMessage);
+    void ProcessAcknowledgedEvent(ANT_MESSAGE stMessage);
     void ProcessNetworkKeyResponse(ANT_MESSAGE stMessage);
     void ProcessAssignChannelResponse(unsigned char ucChannelNr);
     void ProcessChannelIDResponse(unsigned char ucChannelNr);

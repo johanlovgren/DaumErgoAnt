@@ -17,7 +17,7 @@ TEST (Daum8008TRS, Constants) {
     auto *ergo = new DaumErgo8008TRS(false);
 
     ASSERT_EQ(ergo->GetEquipmentType(), 25);
-    ASSERT_EQ(ergo->GetCapabilitiesBits(), 0);
+    ASSERT_EQ(ergo->GetHrDistanceSpeedCapabilitiesBits(), 0);
     ASSERT_EQ(ergo->GetTrainerPowerStatusBitField(), 0);
 }
 

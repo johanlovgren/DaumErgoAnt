@@ -47,6 +47,10 @@ public:
      */
     bool RunWorkout(std::vector<std::tuple<int, int>> workout) override;
 
+    void SetPower(uint16_t power) override;
+
+    void SetResistance(uint8_t resistance) override;
+
     uint8_t GetCycleLength() override;
 
     uint8_t GetResistanceLevel() override;
@@ -60,7 +64,8 @@ private:
     bool SendReceiveMessage();
     void Query(const char *header);
 
-    int sock, valRead;
+    int sock;
+    size_t valRead;
     struct sockaddr_in serverAddress{};
     char sendBuffer[ERGOP8I_MAX_BUFFER_SIZE]{};
     char receiveBuffer[ERGOP8I_MAX_BUFFER_SIZE]{};

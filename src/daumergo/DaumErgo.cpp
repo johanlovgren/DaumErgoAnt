@@ -69,8 +69,12 @@ uint8_t DaumErgo::GetHeartRate() const {
     return heartRate;
 }
 
-uint8_t DaumErgo::GetCapabilitiesBits() const {
-    return capabilitiesBits;
+uint8_t DaumErgo::GetHrDistanceSpeedCapabilitiesBits() const {
+    return hrDistanceSpeedCapabilitiesBits;
+}
+
+uint8_t DaumErgo::GetTrainingModeCapabilities() const {
+    return trainingModCapabilities;
 }
 
 uint8_t DaumErgo::GetTrainerPowerStatusBitField() {
@@ -89,4 +93,12 @@ uint8_t DaumErgo::GetTargetPowerFlag() {
     uint8_t tmp = targetPowerFlag;
     dataMutex.unlock();
     return tmp;
+}
+
+uint16_t DaumErgo::GetTargetPower() const {
+    return targetPower;
+}
+
+uint8_t DaumErgo::GetTargetResistance() const {
+    return targetResistance;
 }

@@ -127,7 +127,7 @@ void AntService::Close() {
 
     for (int i = 0; i < antProfiles.size(); ++i) {
         pclMessageObject->CloseChannel(i, MESSAGE_TIMEOUT);
-        // TODO Fix syncronize
+        // TODO Fix sync and remove this dirty solution
         DSIThread_Sleep(500);
     }
 
@@ -159,19 +159,14 @@ void AntService::Close() {
 // ----------------------- Private ------------------------------
 
 /**
- * Prints a transmission buffer
+ * Prints a transmission buffer.
  * @param aucTransmitBuffer buffer to print
  */
-void printTransmissionBuffer(UCHAR *aucTransmitBuffer) {
-    printf("Tx: [%02x],[%02x],[%02x],[%02x],[%02x],[%02x],[%02x],[%02x]\n",
-           aucTransmitBuffer[MESSAGE_BUFFER_DATA1_INDEX],
-           aucTransmitBuffer[MESSAGE_BUFFER_DATA2_INDEX],
-           aucTransmitBuffer[MESSAGE_BUFFER_DATA3_INDEX],
-           aucTransmitBuffer[MESSAGE_BUFFER_DATA4_INDEX],
-           aucTransmitBuffer[MESSAGE_BUFFER_DATA5_INDEX],
-           aucTransmitBuffer[MESSAGE_BUFFER_DATA6_INDEX],
-           aucTransmitBuffer[MESSAGE_BUFFER_DATA7_INDEX],
-           aucTransmitBuffer[MESSAGE_BUFFER_DATA8_INDEX]);
+void printTransmissionBuffer(UCHAR *aucTransmitBuffer, uint8_t len) {
+    for (int i = 0; i < len; ++i) {
+        printf("[%02x]", aucTransmitBuffer[i]);
+    }
+    std::cout << std::endl;
 }
 
 
@@ -245,7 +240,10 @@ void AntService::MessageThread() {
     DSIThread_MutexUnlock(&mutexTestDone);
 }
 
-
+/**
+ * Process an event after the network key was set.
+ * @param ucChannelNr Channel number associated to the event
+ */
 void AntService::ProcessNetworkKeyResponse(ANT_MESSAGE stMessage) {
     if (bVerbose) {
         std::cout << "Network key set" << std::endl;
@@ -258,6 +256,10 @@ void AntService::ProcessNetworkKeyResponse(ANT_MESSAGE stMessage) {
     currentlyInitialisingProfile = true;
 }
 
+/**
+ * Process an event after the channel is assigned
+ * @param ucChannelNr Channel number associated to the event
+ */
 void AntService::ProcessAssignChannelResponse(unsigned char ucChannelNr) {
     if (bVerbose) {
         std::cout << "Channel assigned " << +ucChannelNr << std::endl;
@@ -272,6 +274,10 @@ void AntService::ProcessAssignChannelResponse(unsigned char ucChannelNr) {
     }
 }
 
+/**
+ * Process an event after the channel ID is set
+ * @param ucChannelNr Channel number associated to the event
+ */
 void AntService::ProcessChannelIDResponse(unsigned char ucChannelNr) {
     if (bVerbose) {
         std::cout << "Channel ID set: " << +ucChannelNr << std::endl;
@@ -285,6 +291,10 @@ void AntService::ProcessChannelIDResponse(unsigned char ucChannelNr) {
     }
 }
 
+/**
+ * Process an event when the channel frequency is set
+ * @param ucChannelNr Channel number associated to the event
+ */
 void AntService::ProcessChannelRadioFreq(unsigned char ucChannelNr) {
     if (bVerbose) {
         std::cout << "Radio frequency set at channel: " << +ucChannelNr << std::endl;
@@ -308,6 +318,11 @@ void AntService::ProcessChannelRadioFreq(unsigned char ucChannelNr) {
     }
 }
 
+/**
+ * Process a message event
+ * @param stMessage ANT message containing a message event
+ * @param ucChannelNr Associated channel number to the message event
+ */
 void AntService::ProcessMessageEvent(ANT_MESSAGE stMessage, unsigned char ucChannelNr) {
     switch (stMessage.aucData[2]) {
         case EVENT_CHANNEL_CLOSED: {
@@ -319,7 +334,7 @@ void AntService::ProcessMessageEvent(ANT_MESSAGE stMessage, unsigned char ucChan
 
         }
         case EVENT_TX: {
-            antProfiles[ucChannelNr]->HandleTXEvent((unsigned char *) &aucTransmitBuffer);
+            antProfiles[ucChannelNr]->HandleTXEvent(aucTransmitBuffer);
             pclMessageObject->SendBroadcastData(ucChannelNr, aucTransmitBuffer);
             break;
 
@@ -343,6 +358,10 @@ void AntService::ProcessMessageEvent(ANT_MESSAGE stMessage, unsigned char ucChan
     }
 }
 
+/**
+ * Process a response event.
+ * @param stMessage Message received that is a response event.
+ */
 void AntService::ProcessResponseEvent(ANT_MESSAGE stMessage) {
     UCHAR ucChannelNr = pclMessageObject->GetChannelNumber(&stMessage);
     //RESPONSE TYPE
@@ -448,6 +467,25 @@ void AntService::ProcessResponseEvent(ANT_MESSAGE stMessage) {
 }
 
 /**
+ * Process the received Acknowledged message
+ * @param stMessage ANT_MESSAGE associated to the acknowledged message
+ */
+void AntService::ProcessAcknowledgedEvent(ANT_MESSAGE stMessage) {
+    UCHAR ucChannelNr = pclMessageObject->GetChannelNumber(&stMessage);
+    if (ucChannelNr >= antProfiles.size())
+        return;
+    uint8_t nResponses = antProfiles[ucChannelNr]->HandleAckEvent(&stMessage.aucData[1], aucTransmitBuffer);
+    if (nResponses == NOT_SUPPORTED) // Ignores if not supported
+        return;
+
+    // May be sending responses too fast
+    for (int i = 0; i < nResponses; ++i) {
+        pclMessageObject->SendBroadcastData(ucChannelNr, aucTransmitBuffer);
+        std::cout << "Sent" << std::endl;
+    }
+}
+
+/**
  * Process the received messages, including event messages and thus ensures that channels are initialized properly
  * @param stMessage message received
  */
@@ -456,6 +494,10 @@ void AntService::ProcessMessage(ANT_MESSAGE stMessage) {
         //RESPONSE MESG
         case MESG_RESPONSE_EVENT_ID: {
             ProcessResponseEvent(stMessage);
+            break;
+        }
+        case MESG_ACKNOWLEDGED_DATA_ID: {
+            ProcessAcknowledgedEvent(stMessage);
             break;
         }
         case MESG_STARTUP_MESG_ID: {

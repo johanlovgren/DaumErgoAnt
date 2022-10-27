@@ -20,24 +20,69 @@
 #define CHANNEL_TYPE_SLAVE    (1)
 #define CHANNEL_TYPE_INVALID  (2)
 
+#define NOT_SUPPORTED 0xFF
+
 
 class AntProfile {
 public:
     AntProfile();
+
+    /**
+      * Handles an ANT+ TX Event and fills buffer for broadcast data
+      * @param txBuffer Data that will be sent as broadcast data. Buffer will be filled by this method.
+      */
     virtual void HandleTXEvent(unsigned char *txBuffer) = 0;
 
+    /**
+      * Handles a Acknowledged Event that was received from slave.
+      * @param rxBuf Data received from slave
+      * @param txBuf Data that will be returned to slave. Will be filled by method.
+      * @return How many times the response is requested to be returned to slave if request was handled successful.
+      * If no response shall be sent, 0xFF will be returned.
+      */
+    virtual uint8_t HandleAckEvent(uint8_t *rxBuf, uint8_t *txBuf) = 0;
+
+    /**
+     * Sets the current channel number for the ANT profile
+     * @param number the ANT profiles channel number
+     */
     void SetChannelNumber(uint8_t number);
-    unsigned short GetChannelPeriod() const;
-    unsigned char GetTransType() const;
-    unsigned char GetChannelType() const;
-    unsigned char GetDeviceNum() const;
-    unsigned char GetDeviceType() const;
+
+    /**
+     * Used to retrieve the channel period of the ANT profile
+     * @return The ANT profiles channel period
+     */
+    uint16_t GetChannelPeriod() const;
+
+    /**
+     * Used to retrieve the transmission type of the ANT profile
+     * @return The ANT profiles transmission type
+     */
+    uint8_t GetTransType() const;
+
+    /**
+     * Used to retrieve the channel type of the ANT profile
+     * @return The ANT profiles channel type
+     */
+    uint8_t GetChannelType() const;
+
+    /**
+     * Used to get the device number of the ANT profile
+     * @return The ANT profiles device number
+     */
+    uint8_t GetDeviceNum() const;
+
+    /**
+     * Used to get the device type of the ANT profile
+     * @return The ANT profiles device type
+     */
+    uint8_t GetDeviceType() const;
 
 protected:
     DaumErgo *ergo;
-    uint8_t channelNumber;
-    unsigned char transType, channelType, deviceNum, deviceType;
-    unsigned short channelPeriod;
+    uint8_t transType, channelType, deviceNum, deviceType, channelNumber;
+    uint16_t channelPeriod;
 
 };
+
 #endif //DAUMERGOANT_ANTPROFILE_H

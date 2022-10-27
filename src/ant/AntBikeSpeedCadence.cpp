@@ -27,6 +27,10 @@ AntBikeSpeedCadence::AntBikeSpeedCadence(DaumErgo *ergo) {
     this->deviceNum = DEVICE_NUM;
 }
 
+/**
+ * Handles an ANT+ TX Event
+ * @param txBuffer Data that will be sent as broadcast data. Buffer will be filled by this method.
+ */
 void AntBikeSpeedCadence::HandleTXEvent(unsigned char *txBuffer) {
     unsigned short cadence = ergo->GetCadence();
     unsigned short speed = ergo->GetSpeed();
@@ -56,4 +60,14 @@ void AntBikeSpeedCadence::HandleTXEvent(unsigned char *txBuffer) {
 
     nextSpdTransmit--;
     nextCdcTransmit--;
+}
+
+/**
+ * Acknowledged events is not implemented for this ANT+ profile
+ * @param rxBuf _
+ * @param txBuf _
+ * @return NOT_SUPPORTED (0xFF)
+ */
+uint8_t AntBikeSpeedCadence::HandleAckEvent(uint8_t *txBuffer, uint8_t *txBuf) {
+    return NOT_SUPPORTED;
 }

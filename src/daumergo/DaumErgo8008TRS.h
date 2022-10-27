@@ -53,6 +53,10 @@ public:
 
     uint16_t GetIncline() override;
 
+    void SetPower(uint16_t power) override;
+
+    void SetResistance(uint8_t resistance) override;
+
 
 private:
     Serial* serial;
