@@ -487,7 +487,8 @@ void DataPage71(uint8_t *txBuf,
         txBuf[DP71_DATA_INDEX + 2] = 0xFF;
         txBuf[DP71_DATA_INDEX + 3] = ergo->GetTargetResistance(); // Total resistance
     } else if (latestReceivedCommandID == 49) {
-        uint16_t targetPower = ergo->GetTargetPower();
+        // Target Power set to unit of 0.25W
+        uint16_t targetPower = ergo->GetTargetPower() * 4;
         txBuf[DP71_DATA_INDEX] = 0xFF;
         txBuf[DP71_DATA_INDEX + 1] = 0xFF;
         txBuf[DP71_DATA_INDEX + 2] = (uint8_t) targetPower; // Target Power LSB
