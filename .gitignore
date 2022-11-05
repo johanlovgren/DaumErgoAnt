@@ -84,3 +84,7 @@ include/*
 !libs/includes/.gitkeep
 !libs/.gitkeep
 network_key.cfg
+
+.DS_Store
+cmake-build
+notes.org
