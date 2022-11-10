@@ -42,14 +42,14 @@ public:
      * Sets the target power of the Ergo
      * @param power New target power in Watt
      */
-    virtual void SetPower(uint16_t power) = 0;
+    virtual bool SetPower(uint16_t power) = 0;
 
     /**
      * Sets the target resistance of the Ergo.
      * @param resistance New target resistance as percent of the maximum resistance supported by the Ergo.
      * Must be a integer between 0 and 100, if higher, 100 is assumed.
      */
-    virtual void SetResistance(uint8_t resistance) = 0;
+    virtual bool SetResistance(uint8_t resistance) = 0;
 
     /**
     * Get the current power from the ergo trainer

@@ -47,9 +47,9 @@ public:
      */
     bool RunWorkout(std::vector<std::tuple<int, int>> workout) override;
 
-    void SetPower(uint16_t power) override;
+    bool SetPower(uint16_t power) override;
 
-    void SetResistance(uint8_t resistance) override;
+    bool SetResistance(uint8_t resistance) override;
 
     uint8_t GetCycleLength() override;
 

@@ -288,9 +288,8 @@ bool handleDataPage70Request(uint8_t requestedPage,
 bool handleDataPage48Request(uint8_t *rxBuf, uint8_t *txBuf, DaumErgo *ergo) {
     // Resistance level is in 0.5% unit
     uint8_t targetResistance = rxBuf[DP48_TOTAL_RESISTANCE_INDEX] / 2;
-    ergo->SetResistance(targetResistance);
     std::copy(rxBuf, rxBuf + ANT_STANDARD_DATA_PAYLOAD_SIZE, txBuf);
-    return true;
+    return ergo->SetResistance(targetResistance);
 }
 
 /**
@@ -305,9 +304,8 @@ bool handleDataPage48Request(uint8_t *rxBuf, uint8_t *txBuf, DaumErgo *ergo) {
 bool handleDataPage49Request(uint8_t *rxBuf, uint8_t *txBuf, DaumErgo *ergo) {
     // Power unit in rxBuf is 0.25W
     uint16_t targetPower = (rxBuf[DP49_TARGET_POWER_LSB_INDEX] + (rxBuf[DP49_TARGET_POWER_MSB_INDEX] << 8)) / 4;
-    ergo->SetPower(targetPower);
     std::copy(rxBuf, rxBuf + ANT_STANDARD_DATA_PAYLOAD_SIZE, txBuf);
-    return true;
+    return ergo->SetPower(targetPower);;
 }
 
 /**

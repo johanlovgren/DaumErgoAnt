@@ -47,6 +47,7 @@
 
 #define FE_STATE_READY 2
 #define FE_STATE_IN_USE 3
+#define FE_STATE_PAUSED 4
 
 // ----------------------- Public -------------------------------
 
@@ -153,20 +154,22 @@ uint16_t DaumErgo8008TRS::GetIncline() {
     return 0x7FFF;
 }
 
-void DaumErgo8008TRS::SetPower(uint16_t power) {
+bool DaumErgo8008TRS::SetPower(uint16_t power) {
     targetPower = power;
     power = (uint16_t) (round(power / 5) * 5);
     if (power > MAXIMUM_WATT)
         SetWatt(MAXIMUM_WATT);
     else
         SetWatt(power);
+    return true;
 }
 
-void DaumErgo8008TRS::SetResistance(uint8_t resistance) {
+bool DaumErgo8008TRS::SetResistance(uint8_t resistance) {
     resistance = resistance >= 100 ? 100 : resistance;
     targetResistance = resistance;
     uint16_t power = MAXIMUM_WATT * ((double) resistance / 100);
     SetPower(power);
+    return true;
 }
 
 // ----------------------- Private  -------------------------------
@@ -242,7 +245,7 @@ void DaumErgo8008TRS::UpdateTrainingData() {
     pulse = rxBuffer[PULSE_OFFSET];
     gear = rxBuffer[GEAR_OFFSET];
     pedalOnOff = rxBuffer[PEDAL_ON_OFF_OFFSET];
-    feStateBits = pedalOnOff ? FE_STATE_IN_USE : FE_STATE_READY;
+    feStateBits = pedalOnOff ? FE_STATE_IN_USE : FE_STATE_IN_USE; // TODO Fix!
     distanceTraveled = rxBuffer[DISTANCE_OFFSET] + (rxBuffer[DISTANCE_OFFSET + 1] << 8);
     elapsedTime = rxBuffer[TIME_OFFSET] + (rxBuffer[TIME_OFFSET + 1] << 8);
     dataMutex.unlock();

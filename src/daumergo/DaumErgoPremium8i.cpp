@@ -116,12 +116,14 @@ void DaumErgoPremium8i::Close() {
 }
 
 // TODO Implement the following methods
-void DaumErgoPremium8i::SetPower(uint16_t power) {
-
+bool DaumErgoPremium8i::SetPower(uint16_t power) {
+    // Not implemented!
+    return false;
 }
 
-void DaumErgoPremium8i::SetResistance(uint8_t resistance) {
-
+bool DaumErgoPremium8i::SetResistance(uint8_t resistance) {
+    // Not implemented!
+    return false;
 }
 
 uint8_t DaumErgoPremium8i::GetCycleLength() {

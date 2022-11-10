@@ -13,8 +13,8 @@ class TestErgo: public DaumErgo {
 public:
     explicit TestErgo();
     ~TestErgo();
-    void SetPower(uint16_t power) override;
-    void SetResistance(uint8_t resistance) override;
+    bool SetPower(uint16_t power) override;
+    bool SetResistance(uint8_t resistance) override;
     void SetCadence(unsigned short cadence);
     void SetSpeed(unsigned short speed);
     void SetEquipmentType(uint8_t equipmentType);

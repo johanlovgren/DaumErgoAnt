@@ -53,9 +53,9 @@ public:
 
     uint16_t GetIncline() override;
 
-    void SetPower(uint16_t power) override;
+    bool SetPower(uint16_t power) override;
 
-    void SetResistance(uint8_t resistance) override;
+    bool SetResistance(uint8_t resistance) override;
 
 
 private:

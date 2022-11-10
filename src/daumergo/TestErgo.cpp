@@ -32,15 +32,17 @@ void TestErgo::Close() {
     done = true;
 }
 
-void TestErgo::SetPower(uint16_t power) {
+bool TestErgo::SetPower(uint16_t power) {
     power = (uint16_t) round(power / 5) * 5;
     this->currentPower = power;
+    return true;
 }
 
-void TestErgo::SetResistance(uint8_t resistance) {
+bool  TestErgo::SetResistance(uint8_t resistance) {
     targetResistance = resistance;
     uint16_t power = MAXIMUM_WATT * ((double) resistance / 100);
     SetPower(power);
+    return false;
 }
 
 void TestErgo::SetCadence(unsigned short cadence) {
