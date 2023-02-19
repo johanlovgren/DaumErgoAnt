@@ -66,8 +66,8 @@ ANT device number:
 	0 for first USB stick plugged etc.
 ```
 When the application is run together with any of the supported ergo bikes and an ANT USB stick, the application will 
-simulate an ANT+ power sensor with ID 49 and an ANT+ speed/cadence sensor with ID 50. When the application is started, 
-these devices should be visible for other devices to connect and retrieve data.
+simulate an ANT+ FEC device. When the application is started, the simulated device should be visible for other 
+devices to connect and retrieve data from. 
 
 ### Premium 8i
 
