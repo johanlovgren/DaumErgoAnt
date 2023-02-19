@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+
 #define ARG_P8I "p8i"
 #define ERGOP8I_MAX_BUFFER_SIZE 1024
 /**
@@ -39,6 +40,23 @@ public:
      */
     bool RunDataUpdater() override;
 
+    /**
+     * Starts a workout on the bike.
+     * @param workout The workout to run, where each tuple in the vector defines how long a certain wattage should hold
+     * @return True if workout started, otherwise false
+     */
+    bool RunWorkout(std::vector<std::tuple<int, int>> workout) override;
+
+    bool SetPower(uint16_t power) override;
+
+    bool SetResistance(uint8_t resistance) override;
+
+    uint8_t GetCycleLength() override;
+
+    uint8_t GetResistanceLevel() override;
+
+    uint16_t GetIncline() override;
+
 
 private:
     void UpdateTrainingDataComplete();
@@ -46,7 +64,8 @@ private:
     bool SendReceiveMessage();
     void Query(const char *header);
 
-    int sock, valRead;
+    int sock;
+    size_t valRead;
     struct sockaddr_in serverAddress{};
     char sendBuffer[ERGOP8I_MAX_BUFFER_SIZE]{};
     char receiveBuffer[ERGOP8I_MAX_BUFFER_SIZE]{};

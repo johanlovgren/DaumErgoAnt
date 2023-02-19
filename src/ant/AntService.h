@@ -6,16 +6,20 @@
 #define DAUMERGOANT_ANTSERVICE_H
 
 
-#include "types.h"
-#include "dsi_framer_ant.hpp"
-#include "dsi_thread.h"
-#include "dsi_serial_generic.hpp"
-#include "dsi_debug.hpp"
-#include "DaumErgoPremium8i.h"
 
-#define CHANNEL_TYPE_MASTER   (0)
-#define CHANNEL_TYPE_SLAVE    (1)
-#define CHANNEL_TYPE_INVALID  (2)
+#include "../../include/types.h"
+#include "../../include/dsi_framer_ant.hpp"
+#include "../../include/dsi_thread.h"
+#include "../../include/dsi_serial_generic.hpp"
+#include "../../include/dsi_debug.hpp"
+#include "../daumergo/DaumErgoPremium8i.h"
+#include "../ant/AntProfile.h"
+#include <vector>
+
+using namespace std;
+
+#define MAX_ANT_CHANNELS 8
+
 /**
  * Class used to transmit data from the ANT usb stick.
  * Currently virtualizing a bike power sensor and bike speed/cadence sensor
@@ -27,10 +31,13 @@ public:
      * @param ergo the ergo which to transmit data from
      * @param verbose output if true
      */
-    AntService(DaumErgo *ergo, bool verbose);
+    explicit AntService(bool verbose);
     virtual ~AntService();
+
+    bool AddAntProfile(AntProfile* antProfile);
+
     /**
-     * Initializes the ANT service
+     * Initializes the ANT service with the currently added AntProfiles.
      * @param ucUSBDeviceNumber_ what USB device to use, 0 for first, 1 for second, etc..
      * @return true if successful, otherwise false
      */
@@ -48,15 +55,17 @@ private:
     static DSI_THREAD_RETURN RunMessageThread(void *pvParameter_);
     void MessageThread();
     void ProcessMessage(ANT_MESSAGE stMessage);
+    void ProcessResponseEvent(ANT_MESSAGE stMessage);
+    void ProcessAcknowledgedEvent(ANT_MESSAGE stMessage);
+    void ProcessNetworkKeyResponse(ANT_MESSAGE stMessage);
+    void ProcessAssignChannelResponse(unsigned char ucChannelNr);
+    void ProcessChannelIDResponse(unsigned char ucChannelNr);
+    void ProcessChannelRadioFreq(unsigned char ucChannelNr);
+    void ProcessMessageEvent(ANT_MESSAGE stMessage, unsigned char ucChannelNr);
 
-    void TransmitPower(USHORT power);
-    void TransmitSpdCdc(USHORT speed, USHORT cadence);
+    vector<AntProfile*> antProfiles;
 
-    DaumErgo *ergo;
     BOOL bVerbose;
-    BOOL bBroadcastingSpdCdc;
-    BOOL bBroadcastingPower;
-    BOOL bMyDone;
     BOOL bDone;
     DSISerialGeneric* pclSerialObject;
     DSIFramerANT* pclMessageObject;
@@ -66,22 +75,10 @@ private:
 
     BOOL initialised;
 
-    UCHAR aucTransmitBuffer[ANT_STANDARD_DATA_PAYLOAD_SIZE];
+    uint8_t nInitialisedProfiles;
+    bool currentlyInitialisingProfile;
 
-    // Power sensor variables
-    USHORT cumulativePower;
-    UCHAR updateEventCountPower;
-    // Cadence sensor variables
-    USHORT usLastCrankEvent;
-    USHORT usCumCranks;
-    USHORT usCrankRevPeriod;
-    // Speed sensor variables
-    USHORT usLastWheelEvent;
-    USHORT usWheelRevPeriod;
-    USHORT usCumWheelRev;
-    // Variables used to track next transmit
-    int nextSpdTransmit;
-    int nextCdcTransmit;
+    unsigned char aucTransmitBuffer[ANT_STANDARD_DATA_PAYLOAD_SIZE];
 };
 
 

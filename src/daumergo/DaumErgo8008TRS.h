@@ -20,7 +20,7 @@ public:
      * Default constructor
      * @param verbose output enabled if true
      */
-    explicit  DaumErgo8008TRS(bool verbose);
+    explicit DaumErgo8008TRS(bool verbose);
     ~DaumErgo8008TRS();
     /**
      * Initializes the DaumErgo8008TRS, setting up the serial connection
@@ -39,20 +39,42 @@ public:
      * @return true if started successfully, otherwise false
      */
     bool RunDataUpdater() override;
+    /**
+     * Runs a workout on the ergo.
+     * @param workout Workout to run, where each element in the vector is a tuple defining how long time a certain
+     * wattage should hold
+     * @return
+     */
+    bool RunWorkout(std::vector<std::tuple<int, int>> workout) override;
+
+    uint8_t GetCycleLength() override;
+
+    uint8_t GetResistanceLevel() override;
+
+    uint16_t GetIncline() override;
+
+    bool SetPower(uint16_t power) override;
+
+    bool SetResistance(uint8_t resistance) override;
+
 
 private:
     Serial* serial;
-    unsigned char GetErgoAddress();
+    std::mutex serialMutex;
+    bool GetErgoAddress();
     void DataUpdater();
     void UpdateTrainingData();
+    void SimpleController(std::vector<std::tuple<int, int>>);
+    void SetWatt(int watt);
+    void SetTime(uint8_t seconds, uint8_t minutes, uint8_t hours);
 
 
     unsigned char ergoAddress;
     u_int8_t currentProgramme, currentUser, pulse, pulseStatus, gear, time;
-    float distance, joule, realJoule;
+    float joule, realJoule;
     bool pedalOnOff;
-    unsigned char txBuffer[ERGO_8K8TRS_MAX_BUFFER_SIZE];
-    unsigned char rxBuffer[ERGO_8K8TRS_MAX_BUFFER_SIZE];
+    uint8_t txBuffer[ERGO_8K8TRS_MAX_BUFFER_SIZE];
+    uint8_t rxBuffer[ERGO_8K8TRS_MAX_BUFFER_SIZE];
 };
 
 
