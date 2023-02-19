@@ -165,6 +165,8 @@ bool DaumErgo8008TRS::SetPower(uint16_t power) {
 }
 
 bool DaumErgo8008TRS::SetResistance(uint8_t resistance) {
+    // Resistance is disabled due to Ergo issues
+    return false;
     resistance = resistance >= 100 ? 100 : resistance;
     targetResistance = resistance;
     uint16_t power = MAXIMUM_WATT * ((double) resistance / 100);

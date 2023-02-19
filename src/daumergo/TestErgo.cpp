@@ -42,7 +42,7 @@ bool  TestErgo::SetResistance(uint8_t resistance) {
     targetResistance = resistance;
     uint16_t power = MAXIMUM_WATT * ((double) resistance / 100);
     SetPower(power);
-    return false;
+    return true;
 }
 
 void TestErgo::SetCadence(unsigned short cadence) {
